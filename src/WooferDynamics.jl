@@ -49,12 +49,12 @@ function forwardKinematics!(r_body::Vector{Float64}, α::Vector{Float64}, i::Int
 	p = RotYX(theta, beta)*unrotated
 
 	if i==1
-		r_body = unrotated + [WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
+		r_body .= p + [WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
 	elseif i==2
-		r_body = unrotated + [WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR, 0]
+		r_body .= p + [WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR, 0]
 	elseif i==3
-		r_body = unrotated + [-WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
-	else i==4
-		r_body = unrotated + [-WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR, 0]
+		r_body .= p + [-WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
+	else
+		r_body .= p + [-WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR, 0]
 	end
 end

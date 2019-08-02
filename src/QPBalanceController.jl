@@ -11,9 +11,9 @@ using OSQP
 	kp_ang::Float64 = wn_ang^2
 	kd_ang::Float64 = 2*wn_ang*zeta_ang
 
-	mu::Float64 = 1.0
+	mu::Float64 = 0.75
 	beta::Float64 = 5.0e-2
-	gamma::Float64 = 2.0e3
+	gamma::Float64 = 2.0e2
 	alpha::Float64 = 1.0e-3
 
 	C::SparseMatrixCSC{Float64, Int64}
@@ -27,7 +27,7 @@ function initBalanceController()
 	C = zeros(20, 12)
 
 	# FIXME: mu, active_feet is really defined here and not in the config struct
-	mu = 1.5
+	mu = 1.0
 	active_feet = [1, 1, 1, 1]
 	min_vert_force = 1
 	max_vert_force = 133
@@ -41,12 +41,18 @@ function initBalanceController()
 		# fx-ufz <= 0
 		C[(i-1)*5+3, (i-1)*3+1] = 1
 		C[(i-1)*5+3, (i-1)*3+3] = -mu
+		# # ufz-fx >= 0
+		# C[(i-1)*5+3, (i-1)*3+1] = -1
+		# C[(i-1)*5+3, (i-1)*3+3] = mu
 		# ufz+fy >= 0
 		C[(i-1)*5+4, (i-1)*3+2] = 1
 		C[(i-1)*5+4, (i-1)*3+3] = mu
-		# ufz-fy >= 0
+		# fy-ufz <= 0
 		C[(i-1)*5+5, (i-1)*3+2] = 1
 		C[(i-1)*5+5, (i-1)*3+3] = -mu
+		# # ufz-fy >= 0
+		# C[(i-1)*5+5, (i-1)*3+2] = -1
+		# C[(i-1)*5+5, (i-1)*3+3] = mu
 	end
 
 	C = sparse(C)
@@ -64,12 +70,18 @@ function initBalanceController()
 		# fx-ufz <= 0
 		lb[(i-1)*5+3] = -Inf
 		ub[(i-1)*5+3] = 0
+		# # ufz-fx >= 0
+		# lb[(i-1)*5+3] = 0
+		# ub[(i-1)*5+3] = Inf
 		# ufz+fy >= 0
 		lb[(i-1)*5+4] = 0
 		ub[(i-1)*5+4] = Inf
-		# ufz-fy >= 0
+		# fy-ufz >= 0
 		lb[(i-1)*5+5] = -Inf
 		ub[(i-1)*5+5] = 0
+		# # ufz-fy >= 0
+		# lb[(i-1)*5+5] = 0
+		# ub[(i-1)*5+5] = Inf
 	end
 
 	config = BalanceControllerConfig(mu=mu, C=C, lb=lb, ub=ub, active_feet=active_feet)
@@ -105,6 +117,9 @@ function balanceController!(torques, x, joint_pos, p_ref, o_ref, f_prev, config:
 			foot_locs[3*(i-1)+1:3*(i-1)+3] .= R * r_body
 		end
 	end
+
+	# print("Foot locations: ")
+	# println(foot_locs)
 
 	f_world = zeros(12)
 	solveFootForces!(f_world, ref_wrench, active_feet, foot_locs, f_prev, config)
@@ -142,7 +157,7 @@ function solveFootForces!(forces, ref_wrench, active_feet, foot_locs, f_prev, co
 	A[4:6, 7:9] = skewSymmetricMatrix(foot_locs[7:9])
 	A[4:6, 10:12] = skewSymmetricMatrix(foot_locs[10:12])
 
-	K = Diagonal([1, 1, 1, config.gamma, config.gamma, config.gamma])
+	K = Diagonal([1e-1, 1e-1, 1e-1, config.gamma, config.gamma, config.gamma])
 
 	P = 2*(transpose(A)*K*A + (config.alpha + config.beta)*Matrix{Float64}(I, 12, 12))
 	P = sparse(P)
@@ -157,13 +172,16 @@ function solveFootForces!(forces, ref_wrench, active_feet, foot_locs, f_prev, co
 
 	forces .= results.x
 
-	o_residual = transpose(A[4:6, :]*forces - ref_wrench[4:6])*(A[4:6, :]*forces - ref_wrench[4:6])
-	p_residual = transpose(A[1:3, :]*forces - ref_wrench[1:3])*(A[1:3, :]*forces - ref_wrench[1:3])
+	o_residual = transpose(A[4:6, :]*forces - ref_wrench[4:6])*K[4:6, 4:6]*(A[4:6, :]*forces - ref_wrench[4:6])
+	p_residual = transpose(A[1:3, :]*forces - ref_wrench[1:3])*K[1:3, 1:3]*(A[1:3, :]*forces - ref_wrench[1:3])
 
-	print("Position: ")
-	println(p_residual)
-
-	print("Orientation: ")
-	println(o_residual)
+	# print("Position: ")
+	# println(p_residual)
+	#
+	# print("Orientation: ")
+	# println(o_residual)
+	#
+	# print("Objective: ")
+	# println(results.info.obj_val)
 
 end
