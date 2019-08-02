@@ -650,88 +650,6 @@ function loadmodel(modelfile, width, height)
    return s
 end
 
-function simstep(s::mjSim)
-   d = s.d
-   m = s.m
-
-   ## vector initialization ##
-   # TODO: make this only happen once, not every time simstep is canceled
-   torques = zeros(12)
-   x_est = zeros(12)
-   x = zeros(13)
-   p_ref = zeros(3)
-   o_ref = zeros(3)
-   active_feet = zeros(4)
-   g = zeros(3)
-   accel = zeros(3)
-   gyro = zeros(3)
-   joint_pos = zeros(12)
-   joint_vel = zeros(12)
-   controller_config = initBalanceController() # FIXME: make this inplace and only once?
-   forces = -[0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4 # FIXME: this is bad
-
-   if s.paused
-      if s.pert[].active > 0
-         mjv_applyPerturbPose(m, d, s.pert, 1)  # move mocap and dynamic bodies
-         mj_forward(m, d)
-      end
-   else
-      #slow motion factor: 10x
-      factor = s.slowmotion ? 10 : 1
-
-      # advance effective simulation time by 1/refreshrate
-      startsimtm = d.d[].time
-      starttm = time()
-      refreshtm = 1.0/(factor*s.refreshrate)
-      updates = refreshtm / m.m[].opt.timestep
-
-      steps = round(Int, round(s.framecount+updates)-s.framecount)
-      s.framecount += updates
-
-      for i=1:steps
-         # clear old perturbations, apply new
-         d.xfrc_applied .= 0.0
-         if s.pert[].select > 0
-            mjv_applyPerturbPose(m, d, s.pert, 0) # move mocap bodies only
-            mjv_applyPerturbForce(m, d, s.pert)
-         end
-
-         t = d.d[].time
-
-         # ground truth states
-         x[1:3] .= s.d.qpos[1:3]
-         x[4:7] .= s.d.qpos[4:7]
-         x[8:10] .= s.d.qvel[1:3]
-         x[11:13] .= s.d.qvel[4:6]
-
-         accel       .= s.d.sensordata[1:3]
-         gyro        .= s.d.sensordata[4:6]
-         joint_pos   .= s.d.sensordata[7:18]
-         joint_vel   .= s.d.sensordata[19:30]
-
-         # convert quaternion to CRP
-         quaternion2CRP!(g, x[4:7])
-
-         ## Add in state estimation here ##
-         x_est[1:3] .= x[1:3]
-         x_est[4:6] .= g
-         x_est[7:9] .= x[8:10]
-         x_est[10:12] .= x[11:13]
-
-         ## Add in control here ##
-         standingPlanner!(p_ref, o_ref, t)
-         balanceController!(torques, x_est, joint_pos, p_ref, o_ref, forces, controller_config)
-
-         s.d.ctrl .= torques
-
-         mj_step(s.m, s.d)
-
-         # break on reset
-         (d.d[].time < startsimtm) && break
-      end
-   end
-end
-
 function simulate()
    # look at local directory
    pushfirst!(PyVector(pyimport("sys")."path"), @__DIR__)
@@ -741,11 +659,89 @@ function simulate()
    xmlparser.Parse()
 
    s = loadmodel("src/woofer_out.xml", 1200, 900)
+
+   d = s.d
+   m = s.m
+
+   # initialize everything once
+   torques = zeros(12)
+   x_est = zeros(12)
+   x = zeros(13)
+   p_ref = zeros(3)
+   o_ref = zeros(3)
+   g = zeros(3)
+   accel = zeros(3)
+   gyro = zeros(3)
+   joint_pos = zeros(12)
+   joint_vel = zeros(12)
+   controller_config = initBalanceController() # FIXME: make this inplace and only once?
+   forces = -[0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
+
    # Loop until the user closes the window
    WooferSim.alignscale(s)
    while !GLFW.WindowShouldClose(s.window)
+      ### basically sim step so things don't have to be defined multiple times
+      if s.paused
+         if s.pert[].active > 0
+            mjv_applyPerturbPose(m, d, s.pert, 1)  # move mocap and dynamic bodies
+            mj_forward(m, d)
+         end
+      else
+         #slow motion factor: 10x
+         factor = s.slowmotion ? 10 : 1
 
-      simstep(s)
+         # advance effective simulation time by 1/refreshrate
+         startsimtm = d.d[].time
+         starttm = time()
+         refreshtm = 1.0/(factor*s.refreshrate)
+         updates = refreshtm / m.m[].opt.timestep
+
+         steps = round(Int, round(s.framecount+updates)-s.framecount)
+         s.framecount += updates
+
+         for i=1:steps
+            # clear old perturbations, apply new
+            d.xfrc_applied .= 0.0
+            if s.pert[].select > 0
+               mjv_applyPerturbPose(m, d, s.pert, 0) # move mocap bodies only
+               mjv_applyPerturbForce(m, d, s.pert)
+            end
+
+            t = d.d[].time
+
+            # ground truth states
+            x[1:3] .= s.d.qpos[1:3]
+            x[4:7] .= s.d.qpos[4:7]
+            x[8:10] .= s.d.qvel[1:3]
+            x[11:13] .= s.d.qvel[4:6]
+
+            accel       .= s.d.sensordata[1:3]
+            gyro        .= s.d.sensordata[4:6]
+            joint_pos   .= s.d.sensordata[7:18]
+            joint_vel   .= s.d.sensordata[19:30]
+
+            # convert quaternion to CRP
+            quaternion2CRP!(g, x[4:7])
+
+            ## Add in state estimation here ##
+            x_est[1:3] .= x[1:3]
+            x_est[4:6] .= g
+            x_est[7:9] .= x[8:10]
+            x_est[10:12] .= x[11:13]
+
+            ## Add in control here ##
+            standingPlanner!(p_ref, o_ref, t)
+            balanceController!(torques, x_est, joint_pos, p_ref, o_ref, forces, controller_config)
+
+            s.d.ctrl .= torques
+
+            mj_step(s.m, s.d)
+
+            # break on reset
+            (d.d[].time < startsimtm) && break
+         end
+      end
+      # simstep(s)
 
       render(s, s.window)
       GLFW.PollEvents()

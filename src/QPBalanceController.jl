@@ -41,18 +41,12 @@ function initBalanceController()
 		# fx-ufz <= 0
 		C[(i-1)*5+3, (i-1)*3+1] = 1
 		C[(i-1)*5+3, (i-1)*3+3] = -mu
-		# # ufz-fx >= 0
-		# C[(i-1)*5+3, (i-1)*3+1] = -1
-		# C[(i-1)*5+3, (i-1)*3+3] = mu
 		# ufz+fy >= 0
 		C[(i-1)*5+4, (i-1)*3+2] = 1
 		C[(i-1)*5+4, (i-1)*3+3] = mu
 		# fy-ufz <= 0
 		C[(i-1)*5+5, (i-1)*3+2] = 1
 		C[(i-1)*5+5, (i-1)*3+3] = -mu
-		# # ufz-fy >= 0
-		# C[(i-1)*5+5, (i-1)*3+2] = -1
-		# C[(i-1)*5+5, (i-1)*3+3] = mu
 	end
 
 	C = sparse(C)
@@ -70,18 +64,12 @@ function initBalanceController()
 		# fx-ufz <= 0
 		lb[(i-1)*5+3] = -Inf
 		ub[(i-1)*5+3] = 0
-		# # ufz-fx >= 0
-		# lb[(i-1)*5+3] = 0
-		# ub[(i-1)*5+3] = Inf
 		# ufz+fy >= 0
 		lb[(i-1)*5+4] = 0
 		ub[(i-1)*5+4] = Inf
 		# fy-ufz >= 0
 		lb[(i-1)*5+5] = -Inf
 		ub[(i-1)*5+5] = 0
-		# # ufz-fy >= 0
-		# lb[(i-1)*5+5] = 0
-		# ub[(i-1)*5+5] = Inf
 	end
 
 	config = BalanceControllerConfig(mu=mu, C=C, lb=lb, ub=ub, active_feet=active_feet)
@@ -171,17 +159,4 @@ function solveFootForces!(forces, ref_wrench, active_feet, foot_locs, f_prev, co
 	results = OSQP.solve!(prob)
 
 	forces .= results.x
-
-	o_residual = transpose(A[4:6, :]*forces - ref_wrench[4:6])*K[4:6, 4:6]*(A[4:6, :]*forces - ref_wrench[4:6])
-	p_residual = transpose(A[1:3, :]*forces - ref_wrench[1:3])*K[1:3, 1:3]*(A[1:3, :]*forces - ref_wrench[1:3])
-
-	# print("Position: ")
-	# println(p_residual)
-	#
-	# print("Orientation: ")
-	# println(o_residual)
-	#
-	# print("Objective: ")
-	# println(results.info.obj_val)
-
 end
