@@ -20,10 +20,7 @@
 	Ix::Float64 = MASS/12 * (W^2 + T^2)
 	Iy::Float64 = MASS/12 * (L^2 + T^2)
 	Iz::Float64 = MASS/12 * (L^2 + W^2)
-	INERTIA::SMatrix{3,3,Float64,9} = @SMatrix [Ix 0 0;
-												0 Iy 0;
-												0 0 Iz]
-
+	INERTIA::Diagonal{Float64} = Diagonal([Ix, Iy, Iz])
 end
 
 WOOFER_CONFIG = WooferConfig()

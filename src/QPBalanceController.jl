@@ -135,15 +135,15 @@ end
 
 function solveFootForces!(forces, ref_wrench, active_feet, foot_locs, f_prev, config::BalanceControllerConfig)
 	A = zeros(6,12)
-	A[1:3, 1:3] = Matrix{Float64}(I, 3, 3)
-	A[1:3, 4:6] = Matrix{Float64}(I, 3, 3)
-	A[1:3, 7:9] = Matrix{Float64}(I, 3, 3)
-	A[1:3, 10:12] = Matrix{Float64}(I, 3, 3)
+	A[1:3, 1:3] .= Matrix{Float64}(I, 3, 3)
+	A[1:3, 4:6] .= Matrix{Float64}(I, 3, 3)
+	A[1:3, 7:9] .= Matrix{Float64}(I, 3, 3)
+	A[1:3, 10:12] .= Matrix{Float64}(I, 3, 3)
 
-	A[4:6, 1:3] = skewSymmetricMatrix(foot_locs[1:3])
-	A[4:6, 4:6] = skewSymmetricMatrix(foot_locs[4:6])
-	A[4:6, 7:9] = skewSymmetricMatrix(foot_locs[7:9])
-	A[4:6, 10:12] = skewSymmetricMatrix(foot_locs[10:12])
+	A[4:6, 1:3] .= skewSymmetricMatrix(foot_locs[1:3])
+	A[4:6, 4:6] .= skewSymmetricMatrix(foot_locs[4:6])
+	A[4:6, 7:9] .= skewSymmetricMatrix(foot_locs[7:9])
+	A[4:6, 10:12] .= skewSymmetricMatrix(foot_locs[10:12])
 
 	K = Diagonal([1e-1, 1e-1, 1e-1, config.gamma, config.gamma, config.gamma])
 
