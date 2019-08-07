@@ -1,8 +1,12 @@
 using OSQP
+# using Parametron # TODO: use this
 
-@with_kw struct MPCControllerConfig
+@with_kw struct MPCControllerParams
 	# gravity
 	g::Float64 = 9.81
+
+	min_vert_force::Float64 = 1.0
+	max_vert_force::Float64 = 133.0
 
 	# inverse of inertia tensor in body frame
 	J_inv::Diagonal{Float64}
@@ -33,11 +37,11 @@ using OSQP
 
 	K::Diagonal{Float64}
 	R::Diagonal{Float64}
-	alpha::Float64 = 1e-3
+	alpha::Float64 = 1e-6
 
 	# OSQP model
 	prob::OSQP.Model
-	first_run::Bool = true
+	first_run::Vector{Bool} = [true]
 	P::SparseMatrixCSC{Float64, Int64} = zeros(12*N, 12*N)
 	q::Vector{Float64} = zeros(12*N)
 end
@@ -54,7 +58,7 @@ function initMPCControllerConfig(dt::Number, N::Integer, woofer_config::WooferCo
 
 	# TODO: construct constant constraint matrices here
 	C_i = zeros(20, 12)
-	mu = 1.0
+	mu = 0.6
 	min_vert_force = 1
 	max_vert_force = 133
 
@@ -96,19 +100,24 @@ function initMPCControllerConfig(dt::Number, N::Integer, woofer_config::WooferCo
 		ub_i[(i-1)*5+5] = 0
 	end
 
-	C = sparse(repeat(C_i, N, 1))
+	C = zeros(20*N, 12*N)
+	for i in 1:N
+		C[20*(i-1)+1:20*(i-1)+20, 12*(i-1)+1:12*(i-1)+12] .= C_i
+	end
+	C = sparse(C)
+
 	lb = repeat(lb_i, N)
 	ub = repeat(ub_i, N)
 
-	k = ones(10)
+	k = [100, 1, 1, 1, 1, 1, 1, 1, 1, 0]
 	K = Diagonal(repeat(k, N))
 	R = Diagonal(repeat(ones(12), N))
 
-	mpcConfig = MPCControllerConfig(prob=prob, J_inv=J_inv, dt=dt, N=N, K=K, R=R, A_c=A_c, C=C, lb=lb, ub=ub)
+	mpcConfig = MPCControllerParams(prob=prob, J_inv=J_inv, dt=dt, N=N, K=K, R=R, A_c=A_c, C=C, lb=lb, ub=ub, min_vert_force=min_vert_force, max_vert_force=max_vert_force)
 	return mpcConfig
 end
 
-function generateReferenceTrajectory!(x_ref::Vector{T}, x_curr::Vector{T}, x_des::Vector{T}, mpc_config::MPCControllerConfig) where {T<:Number}
+function generateReferenceTrajectory!(x_ref::Array{T, 2}, x_curr::Vector{T}, x_des::Vector{T}, mpc_config::MPCControllerParams) where {T<:Number}
 	# how agressively the MPC will attempt to get to desired state
 	stiffness = 1.0
 
@@ -133,7 +142,7 @@ function skewSymmetricMatrix!(A::Matrix, a::Vector)
 	A[3,2] = a[1]
 end
 
-function solveFootForces!(forces::Vector{T}, x0::Vector{T}, x_ref::Vector{T}, contacts::SparseMatrixCSC{T}, foot_locs::SparseMatrixCSC{T}, mpc_config::MPCControllerConfig, woofer_config::WooferConfig) where {T<:Number}
+function solveFootForces!(forces::Vector{T}, x0::Vector{T}, x_ref::Array{T, 2}, contacts::Array{Int,2}, foot_locs::Array{T,2}, mpc_config::MPCControllerParams, woofer_config::WooferConfig) where {T<:Number}
 	# x_ref: 10xN matrix of state reference trajectory
 	# contacts: 4xN matrix of foot contacts over the planning horizon
 	# foot_locs: 12xN matrix of foot location in body frame over planning horizon
@@ -142,10 +151,10 @@ function solveFootForces!(forces::Vector{T}, x0::Vector{T}, x_ref::Vector{T}, co
 		## construct continuous time B matrix
 		for j in 1:4
 			if contacts[j,i] == 1
-				mpc_config.B_c[4:6, (3*(j-1)+1):(3*(j-1)+3)] .= 1/woofer_config.m*contacts[j,i]*Matrix{Float64}(I, 3, 3)
+				mpc_config.B_c[4:6, (3*(j-1)+1):(3*(j-1)+3)] .= 1/woofer_config.MASS*contacts[j,i]*Matrix{Float64}(I, 3, 3)
 
-				skewSymmetricMatrix!(r_hat, foot_locs[(4*(j-1)+1):(4*(j-1)+4),i])
-				mpc_config.B_c[7:9, (3*(j-1)+1):(3*(j-1)+3)] .= mpc_config.J_inv*r_hat
+				skewSymmetricMatrix!(mpc_config.r_hat, foot_locs[(3*(j-1)+1):(3*(j-1)+3),i])
+				mpc_config.B_c[7:9, (3*(j-1)+1):(3*(j-1)+3)] .= mpc_config.J_inv*mpc_config.r_hat
 
 				mpc_config.lb[20*(i-1)+ 1 + (j-1)*5+1] = mpc_config.min_vert_force
 				mpc_config.ub[20*(i-1)+ 1 + (j-1)*5+1] = mpc_config.max_vert_force
@@ -161,7 +170,7 @@ function solveFootForces!(forces::Vector{T}, x0::Vector{T}, x_ref::Vector{T}, co
 		mpc_config.cont_sys[1:10, 1:10] .= mpc_config.A_c
 		mpc_config.cont_sys[1:10, 11:22] .= mpc_config.B_c
 
-		mpc_config.disc_sys = exp(mpc_config.cont_sys*mpc_config.dt) # TODO: see if there is a better way to do this
+		mpc_config.disc_sys .= exp(mpc_config.cont_sys*mpc_config.dt) # TODO: see if there is a better way to do this
 		if i == 1
 			mpc_config.A_d .= mpc_config.disc_sys[1:10, 1:10]
 		end
@@ -176,17 +185,19 @@ function solveFootForces!(forces::Vector{T}, x0::Vector{T}, x_ref::Vector{T}, co
 		end
 	end
 
-	mpc_config.P = 2*(mpc_config.B_qp' * mpc_config.K * mpc_config.B_qp + mpc_config.alpha*mpc_config.R)
-	mpc_config.q = 2*(mpc_config.B_qp' * mpc_config.K * mpc_config.A_qp * x0 - mpc_config.B_qp' * mpc_config.K * x_ref)
+	mpc_config.P .= sparse(2*(mpc_config.B_qp' * mpc_config.K * mpc_config.B_qp + mpc_config.alpha*mpc_config.R))
+	mpc_config.q .= sparse(2*(mpc_config.B_qp' * mpc_config.K * mpc_config.A_qp * x0 - mpc_config.B_qp' * mpc_config.K * reshape(x_ref, 10*mpc_config.N)))
 
-	# if mpc_config.first_run
-	# 	OSQP.setup!(mpc_config.prob; P=, q=, A=, l=, u=, verbose=false)
-	# 	mpc_config.first_run = false
+	# TODO: make this work
+	# if mpc_config.first_run[1]
+	# 	OSQP.setup!(mpc_config.prob; P=mpc_config.P, q=mpc_config.q, A=mpc_config.C, l=mpc_config.lb, u=mpc_config.ub, verbose=false)
+	# 	mpc_config.first_run[1] = false
 	# else
-	# 	OSQP.update!(mpc_config.prob; Px=, q=)
+	# 	OSQP.update!(mpc_config.prob; q=mpc_config.q)
+	# 	OSQP.update!(mpc_config.prob; Px=mpc_config.P)
 	# end
 
-	OSQP.setup!(mpc_config.prob; P=mpc_config.P, q=mpc_config.q, A=C, l=lb, u=ub, verbose=false)
+	OSQP.setup!(mpc_config.prob; P=mpc_config.P, q=mpc_config.q, A=mpc_config.C, l=mpc_config.lb, u=mpc_config.ub, verbose=false)
 	results = OSQP.solve!(mpc_config.prob)
 
 	forces .= results.x
