@@ -13,9 +13,10 @@ using SparseArrays
 
 include("WooferDynamics.jl")
 include("WooferConfig.jl")
-include("ConventionalRodriguesParameters.jl")
-include("QPBalanceController.jl")
-include("StandingPlanner.jl")
+include("MPCController.jl")
+include("Gait.jl")
+include("FootstepPlanner.jl")
+
 
 ##################################################### globals
 const fontscale = mj.FONTSCALE_200 # can be 100, 150, 200
@@ -665,7 +666,8 @@ function simulate()
 
    # initialize everything once
    torques = zeros(12)
-   x_est = zeros(12)
+   x_est = zeros(10)
+   x_est[10] = 9.81
    x = zeros(13)
    p_ref = zeros(3)
    o_ref = zeros(3)
@@ -674,8 +676,30 @@ function simulate()
    gyro = zeros(3)
    joint_pos = zeros(12)
    joint_vel = zeros(12)
-   controller_config = initBalanceController() # FIXME: make this inplace and only once?
+
+   r1 = zeros(3)
+   r2 = zeros(3)
+   r3 = zeros(3)
+   r4 = zeros(3)
+   cur_foot_loc = zeros(12)
+
+   dt = 0.01
+   N = 15
+
+   mpc_update = 0.01
+
+   mpc_config = initMPCControllerConfig(dt, N, WOOFER_CONFIG)
+   standingGait = GaitParams(num_phases=1, contact_phases=[1;1;1;1], phase_times=[1.0])
+   footstep_config = FootstepPlannerParams()
+
+   contacts = zeros(Int64, 4, N)
+   foot_locs = zeros(12, N)
+
+   x_ref = zeros(10, N)
+
    forces = -[0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
+
+   x_des = [0.31, 0.00, 0.00, 0.00, 0.00, 0.00, 0.0, 0.0, 0.00, 9.81]
 
    # Loop until the user closes the window
    WooferSim.alignscale(s)
@@ -702,6 +726,10 @@ function simulate()
          for i=1:steps
             # clear old perturbations, apply new
             d.xfrc_applied .= 0.0
+
+            # add in noise like perturbations
+            # d.xfrc_applied[7:9] .= 1*randn(Float64, 3)
+
             if s.pert[].select > 0
                mjv_applyPerturbPose(m, d, s.pert, 0) # move mocap bodies only
                mjv_applyPerturbForce(m, d, s.pert)
@@ -720,20 +748,44 @@ function simulate()
             joint_pos   .= s.d.sensordata[7:18]
             joint_vel   .= s.d.sensordata[19:30]
 
-            # convert quaternion to CRP
-            quaternion2CRP!(g, x[4:7])
+            q = Quat(x[4], x[5], x[6], x[7])
+            R = SMatrix{3,3}(q)
+
+            x_b = R'*x[1:3]
+            v_b = R'*x[8:10]
 
             ## Add in state estimation here ##
-            x_est[1:3] .= x[1:3]
-            x_est[4:6] .= g
-            x_est[7:9] .= x[8:10]
-            x_est[10:12] .= x[11:13]
+            x_est[1] = x_b[3]
+            x_est[2:3] .= x[5:6]
+            x_est[4:6] .= v_b
+            x_est[7:9] .= x[11:13]
+            x_est[10] = 9.81
 
-            ## Add in control here ##
-            standingPlanner!(p_ref, o_ref, t)
-            balanceController!(torques, x_est, joint_pos, p_ref, o_ref, forces, controller_config)
+            if t % mpc_update < 1e-3
+               # get current leg positions
+               forwardKinematics!(r1, joint_pos[1:3], 1)
+               forwardKinematics!(r2, joint_pos[4:6], 2)
+               forwardKinematics!(r3, joint_pos[7:9], 3)
+               forwardKinematics!(r4, joint_pos[10:12], 4)
+
+               cur_foot_loc[1:3] = r1
+               cur_foot_loc[4:6] = r2
+               cur_foot_loc[7:9] = r3
+               cur_foot_loc[10:12] = r4
+
+               # update MPC forces
+               generateReferenceTrajectory!(x_ref, x_est, x_des, mpc_config)
+               constructFootHistory!(contacts, foot_locs, t, x_ref, cur_foot_loc, mpc_config, standingGait, footstep_config)
+               solveFootForces!(forces, x_est, x_ref, contacts, foot_locs, mpc_config, WOOFER_CONFIG)
+
+               # println(forces)
+               # println(t)
+            end
+
+            force2Torque!(torques, -forces, joint_pos)
 
             s.d.ctrl .= torques
+            # s.d.ctrl .= zeros(12)
 
             mj_step(s.m, s.d)
 
@@ -741,7 +793,6 @@ function simulate()
             (d.d[].time < startsimtm) && break
          end
       end
-      # simstep(s)
 
       render(s, s.window)
       GLFW.PollEvents()
