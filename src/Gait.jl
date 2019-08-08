@@ -10,7 +10,7 @@
 	phase_times::Vector{Float64} = [0.1, 0.2, 0.1, 0.2]
 
 	phase_length::Float64 = sum(phase_times)
-	alpha::Float64 = 6
+	alpha::Float64 = 4.4
 	beta::Float64 = 6
 end
 

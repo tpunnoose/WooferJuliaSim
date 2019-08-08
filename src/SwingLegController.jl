@@ -4,7 +4,7 @@
 
 	z_rel_des::Float64 = -0.2
 
-	wn_cart::Float64 = 100
+	wn_cart::Float64 = 1000
 	zeta_cart::Float64 = 1.0
 	kp_cart::Float64 = wn_cart^2
 	kd_cart::Float64 = 2*wn_cart*zeta_cart

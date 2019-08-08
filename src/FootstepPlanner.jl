@@ -5,7 +5,6 @@ end
 
 function nextFootstepLocation!(foot_loc, cur_foot_loc::Vector{T}, v_b::Vector{T}, ω_z::T, gait::GaitParams, next_foot_phase::Int, leg::Int) where {T<:Number}
 	# implement body velocity heuristic to get next body relative foot location
-	# TODO: add in om_z into heuristic
 	if leg == 1
 		r_i = [WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR]
 	elseif leg == 2

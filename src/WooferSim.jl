@@ -693,7 +693,7 @@ function simulate()
    active_feet_12 = zeros(Int64, 12)
 
    dt = 0.01
-   N = 10
+   N = 5
 
    mpc_update = 0.01
 
@@ -710,7 +710,7 @@ function simulate()
 
    forces = -[0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
 
-   x_des = [0.31, 0.00, 0.0, 0.0, 0.00, 0.00, 0.0, 0.0, 0.0, 9.81]
+   x_des = [0.34, 0.00, 0.0, 0.0, 0.1, 0.00, 0.0, 0.0, 0.0, 9.81]
 
    # Loop until the user closes the window
    WooferSim.alignscale(s)
@@ -739,7 +739,7 @@ function simulate()
             d.xfrc_applied .= 0.0
 
             # add in noise like perturbations
-            d.xfrc_applied[7:9] .= [5, 5, 10]#1*randn(Float64, 3)
+            # d.xfrc_applied[7:9] .= 10*randn(Float64, 3)
 
             if s.pert[].select > 0
                mjv_applyPerturbPose(m, d, s.pert, 0) # move mocap bodies only

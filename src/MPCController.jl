@@ -109,7 +109,7 @@ function initMPCControllerConfig(dt::Number, N::Integer, woofer_config::WooferCo
 	lb = repeat(lb_i, N)
 	ub = repeat(ub_i, N)
 
-	k = [50, 10, 50, 1, 1, 1, 1, 1, 1, 0]
+	k = [100, 50, 50, 1, 1, 1, 1, 1, 1, 0]
 	K = Diagonal(repeat(k, N))
 	R = Diagonal(repeat(ones(12), N))
 
