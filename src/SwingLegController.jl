@@ -2,7 +2,7 @@
 	foot_trajectories::Array{Float64, 2} = zeros(12, 4)
 	next_foot_loc::Vector{Float64} = zeros(12)
 
-	z_rel_des::Float64 = -0.15
+	z_rel_des::Float64 = -0.175
 
 	wn_cart::Float64 = 20
 	zeta_cart::Float64 = 0.8

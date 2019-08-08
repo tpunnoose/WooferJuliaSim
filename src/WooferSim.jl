@@ -710,7 +710,7 @@ function simulate()
 
    forces = -[0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
 
-   x_des = [0.31, 0.00, 0.00, 0.00, 0.00, 0.00, 0.0, 0.0, 0.00, 9.81]
+   x_des = [0.31, 0.00, 0.00, 0.2, 0.00, 0.00, 0.0, 0.0, 0.00, 9.81]
 
    # Loop until the user closes the window
    WooferSim.alignscale(s)
@@ -759,6 +759,8 @@ function simulate()
             joint_pos   .= s.d.sensordata[7:18]
             joint_vel   .= s.d.sensordata[19:30]
 
+            ######### Function should start here ############
+
             q = Quat(x[4], x[5], x[6], x[7])
             R = SMatrix{3,3}(q)
 
@@ -794,9 +796,14 @@ function simulate()
                # calculate footstep and generate trajectory (stored in swing params) if needed
                if gait.contact_phases[i, prev_phase] == 1
       				if gait.contact_phases[i, cur_phase] == 0
-                     nextFootstepLocation!(swing_params.next_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[4:6], gait, nextPhase(cur_phase, gait))
-                     # swing_params.next_foot_loc[(3*(i-1)+1):(3*(i-1)+3)] .= cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)]
+                     nextFootstepLocation!(view(swing_params.next_foot_loc, (3*(i-1)+1):(3*(i-1)+3)), cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[4:6], gait, nextPhase(cur_phase, gait))
 
+                     print("Previous: ")
+                     print(cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)])
+                     println()
+                     print("New: ")
+                     print(swing_params.next_foot_loc[(3*(i-1)+1):(3*(i-1)+3)])
+                     println()
                      generateFootTrajectory(cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[4:6], t, t+gait.phase_times[cur_phase], i, swing_params)
                   end
                end
@@ -823,6 +830,8 @@ function simulate()
             force2Torque!(mpc_torques, -forces, joint_pos)
 
             s.d.ctrl .= active_feet_12 .* mpc_torques + (ones(12)-active_feet_12) .* swing_torques
+
+            ######### Function should end here ############
 
             mj_step(s.m, s.d)
 

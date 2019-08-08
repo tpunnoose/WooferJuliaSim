@@ -10,7 +10,7 @@
 	phase_times::Vector{Float64} = [0.1, 0.3, 0.1, 0.3]
 
 	phase_length::Float64 = sum(phase_times)
-	alpha::Float64 = 0.5
+	alpha::Float64 = 7.5
 end
 
 function getPhase(t::AbstractFloat, gait_params::GaitParams)

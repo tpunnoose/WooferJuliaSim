@@ -3,7 +3,7 @@
 	next_foot_locs::Vector{Float64} = zeros(12) # TODO: make this a more intelligent initialization for cases where only two feet start active?
 end
 
-function nextFootstepLocation!(foot_loc::Vector{T}, cur_foot_loc::Vector{T}, v_b::Vector{T}, gait::GaitParams, next_foot_phase::Int) where {T<:Number}
+function nextFootstepLocation!(foot_loc, cur_foot_loc::Vector{T}, v_b::Vector{T}, gait::GaitParams, next_foot_phase::Int) where {T<:Number}
 	# implement body velocity heuristic to get next body relative foot location
 	foot_loc[1:2] .= cur_foot_loc[1:2] + gait.alpha*v_b[1:2]*gait.phase_times[next_foot_phase]
 	foot_loc[3] = cur_foot_loc[3]
