@@ -58,3 +58,27 @@ function forwardKinematics!(r_body::Vector{Float64}, α::Vector{Float64}, i::Int
 		r_body .= p + [-WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR, 0]
 	end
 end
+
+function inverseKinematics!(α::Vector{T}, r_body::Vector{T}, i::Int, n::Int = 5, abduction_offset::Number=0) where {T<:Number}
+	#=
+	calculate joint angles via Newton's method
+	α: initial guess (that will be updated in place)
+	n: max number of iterations
+
+	# TODO:
+	=#
+
+	r_guess = zeros(3)
+	eps = 1e-2
+
+	for k=1:n
+		forwardKinematics!(r_guess, zeros(3), i)
+		if norm(r_body - r_guess) < eps
+			break
+		end
+		α .= pinv(legJacobian(α))* (r_body - r_guess) + α
+	end
+
+	print(norm(r_body - r_guess))
+
+end

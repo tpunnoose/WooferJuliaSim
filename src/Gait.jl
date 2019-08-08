@@ -30,3 +30,10 @@ function nextPhase(phase::Integer, gait_params::GaitParams)
 		return phase+1
 	end
 end
+
+function coordinateExpander!(expanded::Vector, compact::Vector)
+	expanded[1:3] .= compact[1]
+	expanded[4:6] .= compact[2]
+	expanded[7:9] .= compact[3]
+	expanded[10:12] .= compact[4]
+end

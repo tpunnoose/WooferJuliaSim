@@ -1,17 +1,18 @@
 @with_kw struct FootstepPlannerParams
-	next_foot_locs::Vector{Float64} = zeros(12)
+	# TODO: make sure this next_foot_loc = swing leg next_foot_loc
+	next_foot_locs::Vector{Float64} = zeros(12) # TODO: make this a more intelligent initialization for cases where only two feet start active?
 end
 
-function nextFootstepLocation!(foot_loc::Vector{T}, cur_foot_loc::Vector{T}, v_b::Vector{T}, t::T, gait::GaitParams, next_foot_phase::Integer) where {T<:Number}
+function nextFootstepLocation!(foot_loc::Vector{T}, cur_foot_loc::Vector{T}, v_b::Vector{T}, gait::GaitParams, next_foot_phase::Int) where {T<:Number}
 	# implement body velocity heuristic to get next body relative foot location
-	phase = getPhase(t, gait)
-
-	foot_loc .= cur_foot_loc + gait.alpha*v_b[1:2]*gait.phase_time[next_foot_phase]
+	foot_loc[1:2] .= cur_foot_loc[1:2] + gait.alpha*v_b[1:2]*gait.phase_times[next_foot_phase]
+	foot_loc[3] = cur_foot_loc[3]
 end
 
 function constructFootHistory!(contacts_future::Array{Int, 2}, foot_locs_future::Array{T}, t::T, x_ref::Array{T}, cur_foot_locs::Vector{T}, mpc_config::MPCControllerParams, gait::GaitParams, foot_params::FootstepPlannerParams) where {T<:Number}
 	# construct the contact and foot location history for MPC solver
 	# cur_foot_locs: 12 dimension vector
+	# TODO: make sure this really works
 
 	t_i = t + mpc_config.dt
 
@@ -34,9 +35,9 @@ function constructFootHistory!(contacts_future::Array{Int, 2}, foot_locs_future:
 			if gait.contact_phases[j, prev_phase] == 1
 				if gait.contact_phases[j, next_phase] == 0
 					# next foot placement must be planned prior to foot being released
-					next_foot_phase = nextPhase(next_phase, gait)
+					# next_foot_phase = nextPhase(next_phase, gait)
 
-					nextFootstepLocation!(next_foot_loc, prev_foot_locs, x_ref[4:6, i], t_i, gait, next_foot_phase)
+					nextFootstepLocation!(next_foot_loc, prev_foot_locs, x_ref[4:6, i], gait, nextPhase(next_phase, gait))
 					foot_params.next_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] .= next_foot_loc
 					prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] .= next_foot_loc
 				else
