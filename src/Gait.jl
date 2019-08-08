@@ -7,10 +7,11 @@
 	# 4xnum_phase array of contacts for each gait phase
 	contact_phases::Array{Int64} = [1 1 1 0; 1 0 1 1; 1 0 1 1; 1 1 1 0]
 
-	phase_times::Vector{Float64} = [0.1, 0.3, 0.1, 0.3]
+	phase_times::Vector{Float64} = [0.1, 0.2, 0.1, 0.2]
 
 	phase_length::Float64 = sum(phase_times)
-	alpha::Float64 = 7.5
+	alpha::Float64 = 6
+	beta::Float64 = 6
 end
 
 function getPhase(t::AbstractFloat, gait_params::GaitParams)

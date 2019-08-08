@@ -109,7 +109,7 @@ function initMPCControllerConfig(dt::Number, N::Integer, woofer_config::WooferCo
 	lb = repeat(lb_i, N)
 	ub = repeat(ub_i, N)
 
-	k = [100, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+	k = [50, 10, 50, 1, 1, 1, 1, 1, 1, 0]
 	K = Diagonal(repeat(k, N))
 	R = Diagonal(repeat(ones(12), N))
 
@@ -201,4 +201,8 @@ function solveFootForces!(forces::Vector{T}, x0::Vector{T}, x_ref::Array{T, 2}, 
 	results = OSQP.solve!(mpc_config.prob)
 
 	forces .= (results.x)[1:12]
+
+	x_exp = mpc_config.A_qp*x0 + mpc_config.B_qp*results.x
+
+	# println(x_exp[10*(mpc_config.N-1)+1:10*(mpc_config.N-1)+10])
 end

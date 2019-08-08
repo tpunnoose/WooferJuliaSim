@@ -31,11 +31,31 @@ function legJacobian(αᵢ::Vector{Float64}, abduction_offset = 0)
 
 end
 
+function legJacobian2(α::Vector{Float64}, abduction_offset = 0)
+
+	beta = α[1]
+	theta = α[2]
+	r = α[3]
+
+	J = zeros(3,3)
+	J[1,1] = 0
+	J[1,2] = -(WOOFER_CONFIG.LEG_L + WOOFER_CONFIG.FOOT_RADIUS + r)*cos(theta)
+	J[1,3] = -sin(theta)
+	J[2,1] = (WOOFER_CONFIG.LEG_L + WOOFER_CONFIG.FOOT_RADIUS + r)*cos(beta)*cos(theta)
+	J[2,2] = -(WOOFER_CONFIG.LEG_L + WOOFER_CONFIG.FOOT_RADIUS + r)*cos(beta)*sin(theta)
+	J[2,3] = sin(beta)*cos(theta)
+	J[3,1] = -(WOOFER_CONFIG.LEG_L + WOOFER_CONFIG.FOOT_RADIUS + r)*sin(beta)*cos(theta)
+	J[3,2] = -(WOOFER_CONFIG.LEG_L + WOOFER_CONFIG.FOOT_RADIUS + r)*cos(beta)*sin(theta)
+	J[3,3] = cos(beta)*cos(theta)
+
+	return J
+end
+
 function force2Torque!(τ::Vector{Float64}, f::Vector{Float64}, α::Vector{Float64})
-	τ[1:3] = transpose(legJacobian(α[1:3]))*f[1:3]
-	τ[4:6] = transpose(legJacobian(α[4:6]))*f[4:6]
-	τ[7:9] = transpose(legJacobian(α[7:9]))*f[7:9]
-	τ[10:12] = transpose(legJacobian(α[10:12]))*f[10:12]
+	τ[1:3] .= transpose(legJacobian(α[1:3]))*f[1:3]
+	τ[4:6] .= transpose(legJacobian(α[4:6]))*f[4:6]
+	τ[7:9] .= transpose(legJacobian(α[7:9]))*f[7:9]
+	τ[10:12] .= transpose(legJacobian(α[10:12]))*f[10:12]
 end
 
 function forwardKinematics!(r_body::Vector{Float64}, α::Vector{Float64}, i::Int, abduction_offset=0)

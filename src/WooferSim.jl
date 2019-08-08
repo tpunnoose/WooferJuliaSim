@@ -693,7 +693,7 @@ function simulate()
    active_feet_12 = zeros(Int64, 12)
 
    dt = 0.01
-   N = 15
+   N = 10
 
    mpc_update = 0.01
 
@@ -710,7 +710,7 @@ function simulate()
 
    forces = -[0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
 
-   x_des = [0.31, 0.00, 0.00, 0.2, 0.00, 0.00, 0.0, 0.0, 0.00, 9.81]
+   x_des = [0.31, 0.00, 0.0, 0.0, 0.00, 0.00, 0.0, 0.0, 0.0, 9.81]
 
    # Loop until the user closes the window
    WooferSim.alignscale(s)
@@ -739,7 +739,7 @@ function simulate()
             d.xfrc_applied .= 0.0
 
             # add in noise like perturbations
-            # d.xfrc_applied[7:9] .= 1*randn(Float64, 3)
+            d.xfrc_applied[7:9] .= [5, 5, 10]#1*randn(Float64, 3)
 
             if s.pert[].select > 0
                mjv_applyPerturbPose(m, d, s.pert, 0) # move mocap bodies only
@@ -796,7 +796,10 @@ function simulate()
                # calculate footstep and generate trajectory (stored in swing params) if needed
                if gait.contact_phases[i, prev_phase] == 1
       				if gait.contact_phases[i, cur_phase] == 0
-                     nextFootstepLocation!(view(swing_params.next_foot_loc, (3*(i-1)+1):(3*(i-1)+3)), cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[4:6], gait, nextPhase(cur_phase, gait))
+                     nextFootstepLocation!(view(swing_params.next_foot_loc, (3*(i-1)+1):(3*(i-1)+3)), cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[4:6], x_est[9], gait, nextPhase(cur_phase, gait), i)
+
+                     # make sure MPC accounts for this next foot location
+                     footstep_config.next_foot_locs[(3*(i-1)+1):(3*(i-1)+3)] .= swing_params.next_foot_loc[(3*(i-1)+1):(3*(i-1)+3)]
 
                      print("Previous: ")
                      print(cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)])
@@ -824,7 +827,14 @@ function simulate()
                generateReferenceTrajectory!(x_ref, x_est, x_des, mpc_config)
                constructFootHistory!(contacts, foot_locs, t, x_ref, cur_foot_loc, mpc_config, gait, footstep_config)
                solveFootForces!(forces, x_est, x_ref, contacts, foot_locs, mpc_config, WOOFER_CONFIG)
+               # println(mpc_torques)
+               # println(forces)
             end
+
+            # directly apply forces
+            # for i in 1:4
+            #    d.xfrc_applied[6*(i+3)+1:6*(i+3)+3] .= forces[(3*(i-1)+1):(3*(i-1)+3)]
+            # end
 
             # needs to be negative so force is exerted by body on world
             force2Torque!(mpc_torques, -forces, joint_pos)

@@ -3,9 +3,21 @@
 	next_foot_locs::Vector{Float64} = zeros(12) # TODO: make this a more intelligent initialization for cases where only two feet start active?
 end
 
-function nextFootstepLocation!(foot_loc, cur_foot_loc::Vector{T}, v_b::Vector{T}, gait::GaitParams, next_foot_phase::Int) where {T<:Number}
+function nextFootstepLocation!(foot_loc, cur_foot_loc::Vector{T}, v_b::Vector{T}, ω_z::T, gait::GaitParams, next_foot_phase::Int, leg::Int) where {T<:Number}
 	# implement body velocity heuristic to get next body relative foot location
-	foot_loc[1:2] .= cur_foot_loc[1:2] + gait.alpha*v_b[1:2]*gait.phase_times[next_foot_phase]
+	# TODO: add in om_z into heuristic
+	if leg == 1
+		r_i = [WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR]
+	elseif leg == 2
+		r_i = [WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR]
+	elseif leg == 3
+		r_i = [-WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR]
+	else
+		r_i = [-WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR]
+	end
+
+	foot_loc[1] = cur_foot_loc[1] + gait.alpha*v_b[1]*gait.phase_times[next_foot_phase] - gait.beta*r_i[2]*ω_z*gait.phase_times[next_foot_phase]
+	foot_loc[2] = cur_foot_loc[2] + gait.alpha*v_b[2]*gait.phase_times[next_foot_phase] + gait.beta*r_i[1]*ω_z*gait.phase_times[next_foot_phase]
 	foot_loc[3] = cur_foot_loc[3]
 end
 
@@ -37,7 +49,7 @@ function constructFootHistory!(contacts_future::Array{Int, 2}, foot_locs_future:
 					# next foot placement must be planned prior to foot being released
 					# next_foot_phase = nextPhase(next_phase, gait)
 
-					nextFootstepLocation!(next_foot_loc, prev_foot_locs, x_ref[4:6, i], gait, nextPhase(next_phase, gait))
+					nextFootstepLocation!(next_foot_loc, prev_foot_locs, x_ref[4:6, i], x_ref[9, i], gait, nextPhase(next_phase, gait), j)
 					foot_params.next_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] .= next_foot_loc
 					prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] .= next_foot_loc
 				else
