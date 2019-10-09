@@ -76,7 +76,10 @@ function initQPParams(dt::AbstractFloat, x0::Vector, ψ::AbstractFloat = 0.0)
 
 	V = dare(A_d, B_d, Q, R)
 	# x0 = [0.34, 0, 0, 0, 0, 0, 0, 0, 0]
-	u0 = [0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
+	# u0 = [0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
+
+	# calculate the steady state control for the desired state
+	u0 = pinv(B_d)*((Matrix{Float64}(I, 12, 12) - A_d)*x0 + dt*[0.0, 0, 0, 0.0, 0.0, 0, 0, 0, 9.81, 0, 0, 0])
 
 	return QPParams(x0=x0, u0=u0, dt=dt, A_d=A_d, B_d=B_d, Q=Q, R=R, V=V)
 end

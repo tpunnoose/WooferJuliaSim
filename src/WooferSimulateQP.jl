@@ -22,8 +22,8 @@ function simulate()
    joint_vel = zeros(12)
    contacts = zeros(4)
 
-   ψ = 0.0
-   x_des = [0.0, 0.0, 0.32, 0.0, 0.0, ψ, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0]
+   ψ = 0.05
+   x_des = [0.05, 0.0, 0.32, 0.05, -0.02, ψ, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0]
 
    lower_dt = 0.001
    # x0 = [0.34, zeros(11)...]
@@ -106,7 +106,7 @@ function simulate()
                # last_t = t
 
                # QP Balance Controller
-               qpBalance!(qp_forces, x_true, qp_params)
+               @time qpBalance!(qp_forces, x_true, qp_params)
                force2Torque!(qp_torques, -(qp_params.u0 + qp_forces), joint_pos)
                s.d.ctrl .= qp_torques
             end
