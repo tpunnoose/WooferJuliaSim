@@ -14,7 +14,11 @@ to your ~/.bash_profile.
 
 3. Install Julia by visiting https://julialang.org/downloads/
 
-4. Install this repository through Julia's Package Manager (Pkg)
+4. Install MuJoCo.jl. Enter the Package Manager by typing the `]` key and type  
+```shell
+pkg> add https://github.com/klowrey/MuJoCo.jl
+```
+5. Install this repository through Pkg
 ```shell
 pkg> add https://github.com/tpunnoose/WooferSim
 ```
@@ -25,6 +29,7 @@ pkg> add https://github.com/tpunnoose/WooferSim
 ```julia
 include("main.jl")
 ```
+In order to change what simulation is being run, scroll to the bottom of the WooferSim.jl and uncomment the desired controller.
 3. The MuJoCo simulator should then pop up in a new window with various interactive options. Press space to start the simulation.
 - Click and drag with the left mouse button to orbit the camera, and with the right mouse button to pan the camera.
 - To perturb the robot, double click on the body you want to perturb, then hold Control and click and drag with the mouse. Using the left mouse button will apply a rotational torque while the right button will apply a translational force.
