@@ -1,3 +1,5 @@
+include("WooferSafetyController.jl")
+
 function simulate()
    # look at local directory
    pushfirst!(PyVector(pyimport("sys")."path"), @__DIR__)
@@ -36,6 +38,10 @@ function simulate()
    qp_params = initQPParams(lower_dt, x_des, ψ)
    qp_forces = zeros(12)
    qp_torques = zeros(12)
+
+   # Initialize safety controller state variables
+   safetystatus = SafetyStatus(safe=true)
+   safetyparams = SafetyParams(maximumjointangle = π/4, maximumjointvelocity = 10.0)
 
    # Loop until the user closes the window
    WooferSim.alignscale(s)
@@ -77,38 +83,46 @@ function simulate()
 
             # lower level update loop (eg state estimation, torque updates)
             if t % lower_dt < 1e-3
-               # ground truth states
-               x[1:3] .= s.d.qpos[1:3]
-               x[4:7] .= s.d.qpos[4:7]
-               x[8:10] .= s.d.qvel[1:3]
-               x[11:13] .= s.d.qvel[4:6]
+                # ground truth states
+                x[1:3] .= s.d.qpos[1:3]
+                x[4:7] .= s.d.qpos[4:7]
+                x[8:10] .= s.d.qvel[1:3]
+                x[11:13] .= s.d.qvel[4:6]
 
-               q = Quat(x[4], x[5], x[6], x[7])
-               R = SMatrix{3,3}(q)
+                q = Quat(x[4], x[5], x[6], x[7])
+                R = SMatrix{3,3}(q)
 
-               x_b = R'*x[1:3]
-               v_b = R'*x[8:10]
+                x_b = R'*x[1:3]
+                v_b = R'*x[8:10]
 
-               ## Add in state estimation here ##
-               x_true[1:3] .= s.d.qpos[1:3]
-               x_true[4:6] .= s.d.qpos[5:7] # is this right q -> g?
-               x_true[7:9] .= s.d.qvel[1:3]
-               x_true[10:12] .= s.d.qvel[4:6] # is this in the body frame?
+                ## Add in state estimation here ##
+                x_true[1:3] .= s.d.qpos[1:3]
+                x_true[4:6] .= s.d.qpos[5:7] # is this right q -> g?
+                x_true[7:9] .= s.d.qvel[1:3]
+                x_true[10:12] .= s.d.qvel[4:6] # is this in the body frame?
 
-               accel       .= s.d.sensordata[1:3]
-               gyro        .= s.d.sensordata[4:6]
-               joint_pos   .= s.d.sensordata[7:18]
-               joint_vel   .= s.d.sensordata[19:30]
+                accel       .= s.d.sensordata[1:3]
+                gyro        .= s.d.sensordata[4:6]
+                joint_pos   .= s.d.sensordata[7:18]
+                joint_vel   .= s.d.sensordata[19:30]
 
-               # stateEstimatorUpdate(t-last_t, accel, gyro, joint_pos, joint_vel, contacts, est_params)
-               # x_est[1:6] .= est_params.x[1:6]
-               # x_est[7:9] .= gyro
-               # last_t = t
+                # stateEstimatorUpdate(t-last_t, accel, gyro, joint_pos, joint_vel, contacts, est_params)
+                # x_est[1:6] .= est_params.x[1:6]
+                # x_est[7:9] .= gyro
+                # last_t = t
 
-               # QP Balance Controller
-               @time qpBalance!(qp_forces, x_true, qp_params)
-               force2Torque!(qp_torques, -(qp_params.u0 + qp_forces), joint_pos)
-               s.d.ctrl .= qp_torques
+                # QP Balance Controller
+                qpBalance!(qp_forces, x_true, qp_params)
+                force2Torque!(qp_torques, -(qp_params.u0 + qp_forces), joint_pos)
+
+                # The &= operation ensures that once issafe returns false, the variable safe will forever onwards be false
+                safetystatus.safe &= issafe(x[1:3], joint_pos, joint_vel, safetyparams)
+
+                if safetystatus.safe
+                    s.d.ctrl .= qp_torques
+                else
+                    s.d.ctrl .= zeros(length(s.d.ctrl))
+                end
             end
 
             mj_step(s.m, s.d)
