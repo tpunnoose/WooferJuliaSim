@@ -4,7 +4,7 @@ using Parameters
 @with_kw struct SafetyParams
     maximumjointvelocity::Float64 = 40.0  # [rad/s]
     maximumjointangle::Float64 = π/4  # [rad]
-    maximumCOMdeviation::Float64 = 0.1 # [m]
+    maximumCOMdeviation::Float64 = 0.2 # [m]
     nominalCOMposition::Vector{Float64} = [0.0, 0.0, 0.34]  # [m]
 end
 

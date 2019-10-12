@@ -118,6 +118,9 @@ function simulate()
                 # The &= operation ensures that once issafe returns false, the variable safe will forever onwards be false
                 safetystatus.safe &= issafe(x[1:3], joint_pos, joint_vel, safetyparams)
 
+                # Use this line for debugging because it allows the robot to go back into a safe position. Do not use it for real-life testing.
+                # safetystatus.safe = issafe(x[1:3], joint_pos, joint_vel, safetyparams)
+
                 if safetystatus.safe
                     s.d.ctrl .= qp_torques
                 else
