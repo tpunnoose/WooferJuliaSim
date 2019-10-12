@@ -14,7 +14,7 @@ function legJacobian(αᵢ::Vector{Float64}, abduction_offset = 0)
 	unrotated = [0, abduction_offset, -WOOFER_CONFIG.LEG_L + r]
 	# unrotated = [0, abduction_offset, -WOOFER_CONFIG.LEG_L - WOOFER_CONFIG.FOOT_RADIUS + r]
 	# vector from leg hub to foot in body coordinates
-	p = RotYX(theta, beta)*unrotated
+	p = RotXY(beta, theta)*unrotated
 
 	# directions of positive joint movement
 	theta_axis = RotX(beta)*j
@@ -28,7 +28,7 @@ function legJacobian(αᵢ::Vector{Float64}, abduction_offset = 0)
 	# dpdtheta
 	J[:,2] .= cross(theta_axis, p)
 	# dpdr
-	J[:,3] .= RotYX(theta, beta)*radial_axis
+	J[:,3] .= RotXY(beta, theta)*radial_axis
 
 	return J
 
@@ -82,7 +82,7 @@ function forwardKinematics!(r_body::Vector{Float64}, α::Vector{Float64}, i::Int
 	# leg pointing straight down
 	unrotated = [0, abduction_offset, -WOOFER_CONFIG.LEG_L - WOOFER_CONFIG.FOOT_RADIUS + r]
 	# vector from leg hub to foot in body coordinates
-	p = RotYX(theta, beta)*unrotated
+	p = RotXY(beta, theta)*unrotated
 
 	if i==1
 		r_body .= p + [WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
@@ -101,7 +101,7 @@ function forwardKinematicsAll!(r_body::Vector{Float64}, α::Vector{Float64}, abd
 		unrotated = [0, abduction_offset, -WOOFER_CONFIG.LEG_L + α[3*(i-1)+3]]
 
 		# vector from leg hub to foot in body coordinates
-		p_i = RotYX(α[3*(i-1)+2], α[3*(i-1)+1])*unrotated
+		p_i = RotXY(α[3*(i-1)+1], α[3*(i-1)+2])*unrotated
 		if i==1
 			r_body[1:3] .= p_i + [WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
 		elseif i==2
