@@ -14,15 +14,22 @@ to your ~/.bash_profile.
 
 3. Install Julia by visiting https://julialang.org/downloads/
 
-4. Install MuJoCo.jl. Enter the Package Manager by typing the `]` key and type  
+4. Clone this repository.
+
+5. Enter the Package Manager by typing the `]` key and activate the environment with
+```shell
+pkg> activate .
+```
+
+6. Install MuJoCo.jl while still in the Package Manager with  
 ```shell
 pkg> add https://github.com/klowrey/MuJoCo.jl
 ```
-5. Install this repository through Pkg
-```shell
-pkg> add https://github.com/tpunnoose/WooferSim
-```
 
+7. Then instantiate the environment, which should download all other dependencies.
+```shell
+pkg> instantiate
+```
 ## Run Simulation
 1. Enter the Julia REPL in the WooferSim directory (this will be in the .julia/dev folder).
 2. Run

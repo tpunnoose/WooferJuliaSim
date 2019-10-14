@@ -107,7 +107,7 @@ function simulate()
 
                # QP Balance Controller
                @time qpBalance!(qp_forces, x_true, qp_params)
-               force2Torque!(qp_torques, -(qp_params.u0 + qp_forces), joint_pos)
+               force2Torque!(qp_torques, -(qp_forces), joint_pos)
                s.d.ctrl .= qp_torques
             end
 

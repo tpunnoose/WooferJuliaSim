@@ -141,7 +141,7 @@ function qpBalance!(forces::Vector{T}, x::Vector{T}, params::QPParams) where {T<
 	# OSQP.setup!(prob; P=sparse(P), q=q, verbose=false)
 	results = OSQP.solve!(prob)
 
-	forces .= results.x
+	forces .= results.x + params.u0
 end
 
 function skewSymmetricMatrix!(A::Matrix, a::Vector)
