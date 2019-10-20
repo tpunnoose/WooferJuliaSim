@@ -86,21 +86,36 @@ function initMPCControllerConfig(dt::Number, N::Integer)
 
 	# friction lower and upper bounds for each u_i
 	for i in 1:4
+		# # fz >= 0
+		# lb_friction[(i-1)*5+1] = min_vert_force
+		# ub_friction[(i-1)*5+1] = max_vert_force
+		# # ufz+fx >= 0
+		# lb_friction[(i-1)*5+2] = 0
+		# ub_friction[(i-1)*5+2] = Inf
+		# # fx-ufz <= 0
+		# lb_friction[(i-1)*5+3] = -Inf
+		# ub_friction[(i-1)*5+3] = 0
+		# # ufz+fy >= 0
+		# lb_friction[(i-1)*5+4] = 0
+		# ub_friction[(i-1)*5+4] = Inf
+		# # fy-ufz >= 0
+		# lb_friction[(i-1)*5+5] = -Inf
+		# ub_friction[(i-1)*5+5] = 0
 		# fz >= 0
-		lb_friction[(i-1)*5+1] = min_vert_force
-		ub_friction[(i-1)*5+1] = max_vert_force
+		lb_friction[(i-1)*5+1] = -Inf
+		ub_friction[(i-1)*5+1] = Inf
 		# ufz+fx >= 0
-		lb_friction[(i-1)*5+2] = 0
+		lb_friction[(i-1)*5+2] = -Inf
 		ub_friction[(i-1)*5+2] = Inf
 		# fx-ufz <= 0
 		lb_friction[(i-1)*5+3] = -Inf
-		ub_friction[(i-1)*5+3] = 0
+		ub_friction[(i-1)*5+3] = Inf
 		# ufz+fy >= 0
-		lb_friction[(i-1)*5+4] = 0
+		lb_friction[(i-1)*5+4] = -Inf
 		ub_friction[(i-1)*5+4] = Inf
 		# fy-ufz >= 0
 		lb_friction[(i-1)*5+5] = -Inf
-		ub_friction[(i-1)*5+5] = 0
+		ub_friction[(i-1)*5+5] = Inf
 	end
 
 	# gravity affine term -> maps to vdot

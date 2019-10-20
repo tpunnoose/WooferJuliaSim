@@ -89,6 +89,8 @@ function qpBalance!(forces::Vector{T}, x::Vector{T}, params::QPParams) where {T<
 	P = 2*(params.R + params.B_d'*params.V*params.B_d)
 	q = (2*(x - params.x0)'*params.A_d'*params.V*params.B_d)'
 
+
+	# TODO: put C/lb/ub in the QPParams structure
 	C = zeros(20, 12)
 	mu = 0.6
 	min_vert_force = 1

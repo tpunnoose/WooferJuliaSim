@@ -33,9 +33,9 @@ function simulate()
    # est_params = StateEstimatorParams(dt=lower_dt, x=x0, P=P, Q=Q, R=R)
    # last_t = 0.0
 
-   qp_params = initQPParams(lower_dt, x_des, ψ)
-   qp_forces = zeros(12)
-   qp_torques = zeros(12)
+   lqr_params = initLQRParams(lower_dt, x_des, ψ)
+   lqr_forces = zeros(12)
+   lqr_torques = zeros(12)
 
    # Loop until the user closes the window
    WooferSim.alignscale(s)
@@ -106,9 +106,9 @@ function simulate()
                # last_t = t
 
                # QP Balance Controller
-               qpBalance!(qp_forces, x_true, joint_pos, qp_params)
-               force2Torque!(qp_torques, -lqr_forces, joint_pos)
-               s.d.ctrl .= qp_torques
+               lqrBalance!(lqr_forces, x_true, joint_pos, lqr_params)
+               force2Torque!(lqr_torques, -lqr_forces, joint_pos)
+               s.d.ctrl .= lqr_torques
             end
 
             mj_step(s.m, s.d)

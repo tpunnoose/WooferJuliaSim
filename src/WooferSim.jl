@@ -667,7 +667,7 @@ end
 
 ## simulation inner loop ##
 # uncomment whichever control type you wish to use
-include("WooferSimulateLQR.jl") # infinite horizon unconstrained LQR
-# include("WooferSimulateQP.jl") # LQR solved via QP w/constraints
+# include("WooferSimulateLQR.jl") # infinite horizon unconstrained LQR
+include("WooferSimulateQP.jl") # LQR solved via QP w/constraints
 
 end
