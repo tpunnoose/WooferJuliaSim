@@ -2,6 +2,7 @@ import os
 import shutil
 from os.path import expanduser
 from WooferConfig import WOOFER_CONFIG, ENVIRONMENT_CONFIG
+import math
 
 def Parse():
 	###### ROBOT PARAMETERS #####
@@ -17,13 +18,17 @@ def Parse():
 	woofer_armature 		= 0.0024			# armature for joints [kgm2]
 
 	## Geometry params ##
+	woofer_thigh_length = 0.18/2 # half length of thigh
+	woofer_shin_length = 0.32/2 # half length of shin
+	woofer_shin_pos = 0.5*((2*woofer_shin_length)**2 - (2*woofer_thigh_length)**2)**(0.5)
+	woofer_shin_angle = math.asin(woofer_thigh_length/woofer_shin_length)
 	woofer_leg_radius = WOOFER_CONFIG.FOOT_RADIUS # radius of leg capsule
 	woofer_friction = ENVIRONMENT_CONFIG.MU	# friction between legs and ground
 	woofer_half_size = "%s %s %s"%(WOOFER_CONFIG.L/2, WOOFER_CONFIG.W/2, WOOFER_CONFIG.T/2) # half-size of body box
 
 	woofer_leg_geom = "0 0 0 0 0 %s"%(-WOOFER_CONFIG.LEG_L) # to-from leg geometry
 
-	woofer_start_position = "0 0 %s"%(WOOFER_CONFIG.LEG_L + woofer_leg_radius)	# Initial position of the robot torso
+	woofer_start_position = "0 0 %s"%(2*woofer_shin_pos)	# Initial position of the robot torso
 
 	woofer_force_geom = "0 0 -0.34"
 
@@ -101,6 +106,10 @@ def Parse():
 	filedata = filedata.replace("woofer_leg_geom", str(woofer_leg_geom))
 	filedata = filedata.replace("woofer_start_position", str(woofer_start_position))
 	filedata = filedata.replace("woofer_force_geom", str(woofer_force_geom))
+	filedata = filedata.replace("woofer_thigh_length", str(woofer_thigh_length))
+	filedata = filedata.replace("woofer_shin_length", str(woofer_shin_length))
+	filedata = filedata.replace("woofer_shin_pos", str(woofer_shin_pos))
+	filedata = filedata.replace("woofer_shin_angle", str(woofer_shin_angle))
 
 	# Sensor noise
 	filedata = filedata.replace("woofer_accel_noise", str(woofer_accel_noise))
