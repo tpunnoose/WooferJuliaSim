@@ -49,6 +49,7 @@ function initLQRParams(dt::AbstractFloat, x0::Vector, ψ::AbstractFloat = 0.0)
 		B_c[7:9, (3*(j-1)+1):(3*(j-1)+3)] .= 1/WOOFER_CONFIG.MASS*Matrix{Float64}(I, 3, 3)
 
 		skewSymmetricMatrix!(r_hat, foot_locs[(3*(j-1)+1):(3*(j-1)+3)])
+		println(foot_locs[(3*(j-1)+1):(3*(j-1)+3)])
 		B_c[10:12, (3*(j-1)+1):(3*(j-1)+3)] .= inv(WOOFER_CONFIG.INERTIA)*r_hat*RotZ(ψ)
 	end
 
@@ -70,9 +71,9 @@ function initLQRParams(dt::AbstractFloat, x0::Vector, ψ::AbstractFloat = 0.0)
 
 	Q = Diagonal([1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e3, 1e3, 1e3, 1, 1, 1e2])
 	R = Diagonal([1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4])
-
-	println(A_d)
-	println(B_d)
+	#
+	# println(A_d)
+	# println(B_d)
 	#
 	# println(rank(ctrb(A_d, B_d)))
 
@@ -86,6 +87,7 @@ end
 
 function lqrBalance!(forces::Vector{T}, x::Vector{T}, joint_pos::Vector{T}, lqr_params::LQRParams) where {T<:Number}
 	forces .= lqr_params.u0 - lqr_params.L*(x - lqr_params.x0)
+	println(forces)
 end
 
 function skewSymmetricMatrix!(A::Matrix, a::Vector)

@@ -21,6 +21,7 @@ function simulate()
    joint_pos = zeros(12)
    joint_vel = zeros(12)
    contacts = zeros(4)
+   r_body = zeros(12)
 
    ψ = 0.1
    x_des = [0.0, 0.0, 0.32, 0.05, 0.05, ψ, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0]
@@ -106,6 +107,8 @@ function simulate()
                # last_t = t
 
                # QP Balance Controller
+               forwardKinematics(joint_pos[1:3])
+
                lqrBalance!(lqr_forces, x_true, joint_pos, lqr_params)
                force2Torque!(lqr_torques, -lqr_forces, joint_pos)
                s.d.ctrl .= lqr_torques

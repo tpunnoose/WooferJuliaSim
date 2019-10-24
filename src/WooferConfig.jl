@@ -21,6 +21,8 @@
 	Iy::Float64 = MASS/12 * (L^2 + T^2)
 	Iz::Float64 = MASS/12 * (L^2 + W^2)
 	INERTIA::Diagonal{Float64} = Diagonal([Ix, Iy, Iz])
+	l0::Float64 = 0.18
+	l1::Float64 = 0.32
 end
 
 WOOFER_CONFIG = WooferConfig()
