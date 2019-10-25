@@ -69,7 +69,8 @@ function initLQRParams(dt::AbstractFloat, x0::Vector, ψ::AbstractFloat = 0.0)
 	# x1 = [0.34, 0, 0, 0.1, -0.1, 0, 0, 0, 0]
 	# println(B_d\((Matrix{Float64}(I, 9, 9) - A_d)*x1 + dt*[0.0, 0, 0, 0.0, -0.0, -9.81, 0, 0, 0]))
 
-	Q = Diagonal([1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e3, 1e3, 1e3, 1, 1, 1e2])
+	# Q = Diagonal([1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e3, 1e3, 1e3, 1, 1, 1e2])
+	Q = Diagonal([1e3, 1e3, 1e2, 1e2, 1e2, 1e2, 1e3, 1e3, 1e3, 1, 1, 1e2])
 	R = Diagonal([1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4])
 	#
 	# println(A_d)
@@ -87,7 +88,6 @@ end
 
 function lqrBalance!(forces::Vector{T}, x::Vector{T}, joint_pos::Vector{T}, lqr_params::LQRParams) where {T<:Number}
 	forces .= lqr_params.u0 - lqr_params.L*(x - lqr_params.x0)
-	println(forces)
 end
 
 function skewSymmetricMatrix!(A::Matrix, a::Vector)

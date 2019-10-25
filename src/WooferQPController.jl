@@ -68,7 +68,8 @@ function initQPParams(dt::AbstractFloat, x0::Vector, ψ::AbstractFloat = 0.0)
 	# x1 = [0.34, 0, 0, 0.1, -0.1, 0, 0, 0, 0]
 	# println(B_d\((Matrix{Float64}(I, 9, 9) - A_d)*x1 + dt*[0.0, 0, 0, 0.0, -0.0, -9.81, 0, 0, 0]))
 
-	Q = Diagonal([1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e3, 1e3, 1e3, 1, 1, 1e2])
+	# Q = Diagonal([1e2, 1e2, 1e2, 1e2, 1e2, 1e2, 1e3, 1e3, 1e3, 1, 1, 1e2])
+	Q = Diagonal([1e3, 1e3, 1e2, 1e2, 1e2, 1e2, 1e3, 1e3, 1e3, 1, 1, 1e2])
 	R = Diagonal([1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4, 1e-2, 1e-2, 1e-4])
 
 	#

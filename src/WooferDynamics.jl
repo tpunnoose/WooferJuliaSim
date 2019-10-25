@@ -3,11 +3,11 @@ using ForwardDiff
 function forwardKinematics(α::Vector{T}) where {T<:Real}
 	beta = α[1]
 	ϕ_1 = α[2]
-	ϕ_2 = -α[3]
+	ϕ_2 = α[3]
 
 
 	# coordinates of leg pointing straight down
-	γ = 0.5*(pi - ϕ_1 - ϕ_2)
+	γ = 0.5*(pi - ϕ_1 + ϕ_2)
 	θ = pi/2 - γ - ϕ_1
 
 	# length of leg:
