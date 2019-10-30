@@ -37,7 +37,14 @@ function constructFootHistory!(contacts_future::Array{Int, 2}, foot_locs_future:
 
 	prev_foot_locs .= cur_foot_locs
 
-	for i in 1:mpc_config.N
+
+	# current contact is first column of matrix
+	contacts_future[:,1] .= gait.contact_phases[:, prev_phase]
+
+	# cur_foot_loc is first column of matrix
+	foot_locs_future[:,1] .= cur_foot_locs
+
+	for i in 2:(mpc_config.N+1)
 		next_phase = getPhase(t_i, gait)
 
 		contacts_future[:, i] .= gait.contact_phases[:, next_phase]
@@ -48,13 +55,13 @@ function constructFootHistory!(contacts_future::Array{Int, 2}, foot_locs_future:
 					# next foot placement must be planned prior to foot being released
 					# next_foot_phase = nextPhase(next_phase, gait)
 
-					nextFootstepLocation!(next_foot_loc, prev_foot_locs, x_ref[4:6, i], x_ref[9, i], gait, nextPhase(next_phase, gait), j)
+					nextFootstepLocation!(next_foot_loc, prev_foot_locs, x_ref[7:9, i], x_ref[12, i], gait, nextPhase(next_phase, gait), j)
 					foot_params.next_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] .= next_foot_loc
 					prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] .= next_foot_loc
 				else
 					# integrate x_ref via midpoint to get body relative foot location in the future
-					rdot!(r_dot, prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)], x_ref[7:9, i], x_ref[4:6, i])
-					rdot!(r_dot, prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] + mpc_config.dt/2*r_dot, x_ref[7:9, i], x_ref[4:6, i])
+					rdot!(r_dot, prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)], x_ref[10:12, i], x_ref[7:9, i])
+					rdot!(r_dot, prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] + mpc_config.dt/2*r_dot, x_ref[10:12, i], x_ref[7:9, i])
 					prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] .= prev_foot_locs[(3*(j-1)+1):(3*(j-1)+3)] + mpc_config.dt*r_dot
 				end
 			else

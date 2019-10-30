@@ -5,6 +5,7 @@ formulation.
 
 using OSQP
 using ControlSystems
+using BlockArrays
 # using Parametron # TODO: use this
 
 @with_kw struct MPCControllerParams
@@ -17,34 +18,19 @@ using ControlSystems
 	# planning horizon length
 	N::Int64
 
-	B_c::Matrix{Float64} = zeros(12, 12)
-	r_hat::Matrix{Float64} = zeros(3,3)
+	n::Int64 = 12
+	m::Int64 = 12
+	c::Int64 = 20
 
-	A_d::Matrix{Float64} = zeros(12, 12)
-	B_d::Matrix{Float64} = zeros(12, 12)
-
-	C_dense::Matrix{Float64}
-	# C_sparse::SparseMatrixCSC{Float64, Int64} # TODO: Add this
-	lb::Vector{Float64}
-	ub::Vector{Float64}
+	d::Vector{Float64} = [0, 0, 0, 0, 0, 0, 0, 0, -9.81, 0, 0, 0]*dt
 
 	Q::Diagonal{Float64}
 	R::Diagonal{Float64}
-	H::Array{Float64, 2}
-	V::Array{Float64, 2} = zeros(12,12)
 
-	# sections of constraint matrix C
-	B_lineq::Matrix{Float64}
+	lb_friction::Vector{Float64}
+	ub_friction::Vector{Float64}
 
-	u_ref::Vector{Float64}
-	z_ref::Vector{Float64} = zeros(24*N + 12)
-	z_result::Vector{Float64} = zeros(24*N + 12)
-
-	# OSQP model
-	prob::OSQP.Model
-	first_run::Vector{Bool} = [true]
-	P::SparseMatrixCSC{Float64, Int64} = zeros(24*N+12, 24*N+12)
-	q::Vector{Float64} = zeros(24*N+12)
+	C_friction::Matrix{Float64}
 end
 
 function initMPCControllerConfig(dt::Number, N::Integer)
@@ -152,7 +138,7 @@ function initMPCControllerConfig(dt::Number, N::Integer)
 
 	u_ref = [0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
 
-	mpcConfig = MPCControllerParams(J_inv=J_inv, dt=dt, N=N, H=H, A_d=A_d, C_dense=C_dense, B_lineq=B_lineq, lb=lb, ub=ub, prob=prob, u_ref=u_ref, Q=Q, R=R)
+	mpcConfig = MPCControllerParams(J_inv=J_inv, dt=dt, N=N, lb_friction=lb_friction, ub_friction=ub_friction, C_friction=C_i, Q=Q, R=R)
 	return mpcConfig
 end
 
@@ -160,65 +146,126 @@ function generateReferenceTrajectory!(x_ref::Array{T, 2}, x_curr::Vector{T}, x_d
 	# TODO: integrate the x,y,ψ position from the reference
 
 	x_diff = 1/mpc_config.N * (x_des - x_curr)
+	x_ref[:,1] .= x_curr
 	for i in 1:mpc_config.N
 		if i<mpc_config.N
-			x_ref[:, i] .= x_curr + i*x_diff
+			x_ref[:, i+1] .= x_curr + i*x_diff
 		else
-			x_ref[:, i] .= x_des
+			x_ref[:, i+1] .= x_des
 		end
 	end
 end
 
-function solveFootForces!(forces::Vector{T}, x0::Vector{T}, x_ref::Array{T, 2}, contacts::Array{Int,2}, foot_locs::Array{T,2}, mpc_config::MPCControllerParams, woofer_config::WooferConfig) where {T<:Number}
-	# x_ref: 12xN matrix of state reference trajectory
-	# contacts: 4xN matrix of foot contacts over the planning horizon
-	# foot_locs: 12xN matrix of foot location in body frame over planning horizon
+function solveFootForces!(forces::Vector{T}, x_ref::Array{T, 2}, contacts::Array{Int,2}, foot_locs::Array{T,2}, mpc_config::MPCControllerParams) where {T<:Number}
+	# x_ref: 12xN+1 matrix of state reference trajectory (where first column is x0)
+	# contacts: 4xN+1 matrix of foot contacts over the planning horizon
+	# foot_locs: 12xN+1 matrix of foot location in body frame over planning horizon
 
-	# average yaw over the reference trajectory -> TODO: you don't have to do this in sparse formulation
-	ψ = sum(x_ref[6,:])/mpc_config.N
-	# TODO: recalculate A_c(ψ) here
+	row_array = repeat([mpc_config.n, mpc_config.c], mpc_config.N)
+	col_array = repeat([mpc_config.m, mpc_config.n], mpc_config.N)
+
+	H = BlockArray(zeros(sum(col_array), sum(col_array)), col_array, col_array)
+	C = BlockArray(zeros(sum(row_array), sum(col_array)), row_array, col_array)
+	l = BlockArray(zeros(sum(row_array), 1), row_array, [1])
+	u = BlockArray(zeros(sum(row_array), 1), row_array, [1])
+	z_ref = BlockArray(zeros(sum(col_array), 1), col_array, [1])
+
+	d = [0, 0, 0, 0, 0, 0, 0, 0, -9.81, 0, 0, 0]*dt
+	u_ref = [0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
+	# u_ref = zeros(12)
+
+	A_c = zeros(12,12)
+	B_c = zeros(12,12)
+	A_d_i = zeros(12,12)
+	B_d_i = zeros(12,12)
+	V = zeros(12,12)
+
+	G = zeros(3,3)
+	cont_sys = zeros(24,24)
+	r_hat = zeros(3,3)
 
 	for i in 1:mpc_config.N
-		## construct continuous time B matrix
-		for j in 1:4
-			if contacts[j,i] == 1
-				mpc_config.B_c[7:9, (3*(j-1)+1):(3*(j-1)+3)] .= 1/WOOFER_CONFIG.MASS*Matrix{Float64}(I, 3, 3)
+		## construct continuous time A, B matrix
+		ψ_i = x_ref[6,i]
 
-				skewSymmetricMatrix!(mpc_config.r_hat, foot_locs[(3*(j-1)+1):(3*(j-1)+3)])
-				mpc_config.B_c[10:12, (3*(j-1)+1):(3*(j-1)+3)] .= inv(WOOFER_CONFIG.INERTIA)*mpc_config.r_hat*RotZ(ψ)
+		for j in 1:4
+			k = 3*(j-1)+1 # 1 -> 4 -> 7 -> 10
+			if contacts[j,i] == 1
+				B_c[7:9, k:k+2] .= 1/WOOFER_CONFIG.MASS*Matrix{Float64}(I, 3, 3)
+
+				skewSymmetricMatrix!(r_hat, foot_locs[k:k+2, i])
+				B_c[10:12, k:k+2] .= mpc_config.J_inv*r_hat*RotZ(ψ_i)
 			else
-				mpc_config.B_c[7:12, (3*(j-1)+1):(3*(j-1)+3)] .= zeros(6, 3)
+				B_c[7:12, k:k+2] .= zeros(6, 3)
 			end
+
+			A_c[1:3, 7:9] = Matrix{Float64}(I, 3, 3)
+
+			G[1,1] = sqrt(1 - 0.25*ψ_i^2)
+			G[1,2] = 0.5*ψ_i
+			G[2,1] = -0.5*ψ_i
+			G[2,2] = sqrt(1 - 0.25*ψ_i^2)
+			G[3,3] = sqrt(1 - 0.25*ψ_i^2)
+			A_c[4:6, 10:12] .= G
 		end
 
-		# get the discretized B matrix via ZOH approximation:
-		mpc_config.B_d .= mpc_config.dt*mpc_config.A_d*mpc_config.B_c
-		mpc_config.B_lineq[12(i-1)+1:12(i-1)+12, 12(i-1)+1:12(i-1)+12] .= mpc_config.B_d
+		cont_sys[1:12, 1:12] .= A_c
+		cont_sys[1:12, 13:24] .= B_c
+		disc_sys = exp(cont_sys*mpc_config.dt)
+
+		# get the discretized A,B matrix via ZOH approximation:
+		A_d_i = disc_sys[1:12, 1:12]
+		B_d_i = disc_sys[1:12, 13:24]
+
+		# put dynamics matrices into constraint matrix
+		if i==1
+			# set dynamics upper and lower bounds
+			lu = -A_d_i*x_ref[:,1] - mpc_config.d
+			lu = lu[:, :]
+			setblock!(l, lu, i, 1)
+			setblock!(u, lu, i, 1)
+		else
+			setblock!(C, A_d_i, 2*i-1, 2*(i-1))
+			setblock!(l, -mpc_config.d[:,:], 2*i-1, 1)
+			setblock!(u, -mpc_config.d[:,:], 2*i-1, 1)
+		end
+		setblock!(C, B_d_i, 2*i-1, 2*i-1)
+		setblock!(C, -Matrix{Float64}(I, mpc_config.n, mpc_config.n), 2*i-1, 2*i)
+		setblock!(C, mpc_config.C_friction, 2*i, 2*i-1)
+
+		# set control friction and force bounds
+		# TODO: only do this on first run?
+		setblock!(l, mpc_config.lb_friction[:,:], 2*i, 1)
+		setblock!(u, mpc_config.ub_friction[:,:], 2*i, 1)
+
+		# populate reference trajectory
+		setblock!(z_ref, u_ref[:,:], 2*i-1, 1)
+		setblock!(z_ref, (x_ref[:, i+1])[:,:], 2*i, 1)
+
+		# populate cost matrix
+		setblock!(H, mpc_config.R, 2*i-1, 2*i-1)
+		# TODO: test LQR cost to go if i==N
+		if i==mpc_config.N
+			V .= dare(A_d_i, B_d_i, Diagonal(mpc_config.Q), Diagonal(mpc_config.R))
+			setblock!(H, V, 2*i, 2*i)
+		else
+			setblock!(H, mpc_config.Q, 2*i, 2*i)
+		end
 	end
 
-	mpc_config.lb[1:12] .= -x0
-	mpc_config.ub[1:12] .= -x0
+	P = Array(2*H)
+	q = Array(-2*H*z_ref)[:,1]
+	l_qp = Array(l)[:,1]
+	u_qp = Array(u)[:,1]
 
-	mpc_config.C_dense[13:12*(mpc_config.N+1), (12*mpc_config.N+13):(24*mpc_config.N+12)] .= mpc_config.B_lineq
+	prob = OSQP.Model()
+	# something is screwy with the constraints
+	OSQP.setup!(prob; P=sparse(P), q=q, A=sparse(C[1:12, :]), l=l_qp[1:12], u=u_qp[1:12], verbose=false)
+	results = OSQP.solve!(prob)
 
-	# update z_ref with state reference
-	mpc_config.z_ref[1:12] .= x0
-	mpc_config.z_ref[13:12*(mpc_config.N+1)] .= vec(x_ref)
-	mpc_config.z_ref[12*(mpc_config.N+1)+1:24*(mpc_config.N)+12] .= repeat(mpc_config.u_ref, mpc_config.N)
+	z_result = results.x
 
-	# add LQR cost to go to H
-	mpc_config.H[12*(mpc_config.N)+1:12*(mpc_config.N)+12, 12*(mpc_config.N)+1:12*(mpc_config.N)+12] .= dare(	mpc_config.A_d, mpc_config.B_d,
-																												mpc_config.Q, mpc_config.R)
-
-	mpc_config.P .= sparse(2*mpc_config.H)
-	mpc_config.q .= sparse(-2*mpc_config.H*mpc_config.z_ref)
-
-	OSQP.setup!(mpc_config.prob; P=mpc_config.P, q=mpc_config.q, A=sparse(mpc_config.C_dense), l=mpc_config.lb, u=mpc_config.ub, verbose=false)
-	results = OSQP.solve!(mpc_config.prob)
-
-	mpc_config.z_result .= results.x
-
-	forces .= (results.x)[12*(mpc_config.N+1)+1:12*(mpc_config.N+1)+12]
+	forces .= (results.x)[1:12]
 
 	println(forces)
 
