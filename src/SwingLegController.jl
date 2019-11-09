@@ -8,6 +8,7 @@
 	zeta_cart::Float64 = 0.8
 	kp_cart::Float64 = wn_cart^2
 	kd_cart::Float64 = 2*wn_cart*zeta_cart
+	J::Matrix{Float64} = zeros(3,3)
 end
 
 function generateFootTrajectory(foot_loc_cur::Vector{T}, v_b::Vector{T}, t0::T, tf::T, i::Int, swing_params::SwingLegParams) where {T<:Number}
@@ -60,5 +61,7 @@ function calcSwingTorques!(swing_torques::Vector{T}, cur_pos::Vector{T}, cur_vel
 			 dot(swing_params.foot_trajectories[5:8,i], t_v),
 			 dot(swing_params.foot_trajectories[9:12,i], t_v)]
 
-	swing_torques .= legJacobian(α)' * (swing_params.kp_cart*(r_des - cur_pos) + swing_params.kd_cart*(v_des - cur_vel))
+	legJacobian!(swing_params.J, α)
+
+	swing_torques .= swing_params.J' * (swing_params.kp_cart*(r_des - cur_pos) + swing_params.kd_cart*(v_des - cur_vel))
 end

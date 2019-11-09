@@ -18,16 +18,16 @@
 
    N
 
-   mpc_update = 0.01
+   mpc_update = 0.001
 
-   contacts = zeros(Int64, 4, N)
-   foot_locs = zeros(12, N)
+   contacts = zeros(Int64, 4, N+1)
+   foot_locs = zeros(12, N+1)
 
-   x_ref = zeros(9, N)
+   x_ref = zeros(12, N+1)
 
    forces = [0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0, 0, 0, 1.0]*WOOFER_CONFIG.MASS*9.81/4
 
-   x_des = [0.31, 0.00, 0.0, 0.0, 0.00, 0.00, 0.0, 0.0, 0.0]
+   x_des = [0, 0, 0.32, 0.00, 0.00, 0.00, 0.00, 0.00, 0.0, 0.0, 0.00, 0]
 end
 
 function mpcControlWoofer!(torques::Vector{T}, x_est::Vector{T}, t::T, joint_pos::Vector{T}, joint_vel::Vector{T}, controller_params::ControllerParams, gait::GaitParams, swing_params::SwingLegParams, footstep_config::FootstepPlannerParams, mpc_config::MPCControllerParams) where {T<:Number}
@@ -44,7 +44,7 @@ function mpcControlWoofer!(torques::Vector{T}, x_est::Vector{T}, t::T, joint_pos
 	   # calculate footstep and generate trajectory (stored in swing params) if needed
 	   if gait.contact_phases[i, controller_params.prev_phase] == 1
 			if gait.contact_phases[i, controller_params.cur_phase] == 0
-	         nextFootstepLocation!(view(swing_params.next_foot_loc, (3*(i-1)+1):(3*(i-1)+3)), controller_params.cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[4:6], x_est[9], gait, nextPhase(controller_params.cur_phase, gait), i)
+	         nextFootstepLocation!(view(swing_params.next_foot_loc, (3*(i-1)+1):(3*(i-1)+3)), controller_params.cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[7:9], x_est[12], gait, nextPhase(controller_params.cur_phase, gait), i)
 
 	         # make sure MPC accounts for this next foot location
 	         footstep_config.next_foot_locs[(3*(i-1)+1):(3*(i-1)+3)] .= swing_params.next_foot_loc[(3*(i-1)+1):(3*(i-1)+3)]
@@ -55,14 +55,16 @@ function mpcControlWoofer!(torques::Vector{T}, x_est::Vector{T}, t::T, joint_pos
 	         print("New: ")
 	         print(swing_params.next_foot_loc[(3*(i-1)+1):(3*(i-1)+3)])
 	         println()
-	         generateFootTrajectory(controller_params.cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[4:6], t, t+gait.phase_times[controller_params.cur_phase], i, swing_params)
+	         generateFootTrajectory(controller_params.cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], x_est[7:9], t, t+gait.phase_times[controller_params.cur_phase], i, swing_params)
 	      end
 	   end
 
 	   # actually calculate swing torques
 	   if gait.contact_phases[i, controller_params.cur_phase] == 0
 	      # calculate current foot tip velocity
-	      controller_params.cur_foot_vel_i = legJacobian(joint_pos[(3*(i-1)+1):(3*(i-1)+3)]) * joint_vel[(3*(i-1)+1):(3*(i-1)+3)]
+		  J = zeros(3,3)
+		  legJacobian!(J, joint_pos[(3*(i-1)+1):(3*(i-1)+3)])
+	      controller_params.cur_foot_vel_i = J * joint_vel[(3*(i-1)+1):(3*(i-1)+3)]
 
 	      calcSwingTorques!(controller_params.swing_torque_i, controller_params.cur_foot_loc[(3*(i-1)+1):(3*(i-1)+3)], controller_params.cur_foot_vel_i, joint_pos[(3*(i-1)+1):(3*(i-1)+3)], t, i, swing_params)
 	      controller_params.swing_torques[(3*(i-1)+1):(3*(i-1)+3)] .= controller_params.swing_torque_i
@@ -74,7 +76,7 @@ function mpcControlWoofer!(torques::Vector{T}, x_est::Vector{T}, t::T, joint_pos
 	   # update MPC forces
 	   generateReferenceTrajectory!(controller_params.x_ref, x_est, controller_params.x_des, mpc_config)
 	   constructFootHistory!(controller_params.contacts, controller_params.foot_locs, t, controller_params.x_ref, controller_params.cur_foot_loc, mpc_config, gait, footstep_config)
-	   solveFootForces!(controller_params.forces, x_est, controller_params.x_ref, controller_params.contacts, controller_params.foot_locs, mpc_config, WOOFER_CONFIG)
+	   solveFootForces!(controller_params.forces, controller_params.x_ref, controller_params.contacts, controller_params.foot_locs, mpc_config, true)
 	   println(controller_params.forces)
 	end
 

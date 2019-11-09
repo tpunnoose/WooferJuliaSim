@@ -15,15 +15,13 @@ using Statistics
 
 include("WooferDynamics.jl")
 include("WooferConfig.jl")
-include("WooferStateEstimator.jl")
 
-# # MPC Controller Files
-# # include("MPCControllerDense.jl") # include this for dense MPC formulation
-# include("MPCControllerSparse.jl") # include this for sparse MPC formulation
-# include("Gait.jl")
-# include("FootstepPlanner.jl")
-# include("SwingLegController.jl")
-# include("WooferMPCController.jl")
+# MPC Controller Files
+include("QPSolverSparse.jl") # include this for sparse MPC formulation
+include("Gait.jl")
+include("FootstepPlanner.jl")
+include("SwingLegController.jl")
+include("WooferMPCController.jl")
 
 # LQR Files
 include("WooferLQRController.jl")
@@ -668,6 +666,7 @@ end
 ## simulation inner loop ##
 # uncomment whichever control type you wish to use
 # include("WooferSimulateLQR.jl") # infinite horizon unconstrained LQR
-include("WooferSimulateQP.jl") # LQR solved via QP w/constraints
+# include("WooferSimulateQP.jl") # LQR solved via QP w/constraints
+include("WooferSimulateMPC.jl") # MPC algo
 
 end

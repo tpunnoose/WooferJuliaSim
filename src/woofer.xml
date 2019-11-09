@@ -4,7 +4,7 @@
     defined in this file.
 -->
 <mujoco model="woofer">
-  <compiler angle="radian" coordinate="local" inertiafromgeom="true"/>
+  <compiler angle="radian" coordinate="local" inertiafromgeom="true" settotalmass="woofer_mass"/>
 
   <default>
     <joint armature="woofer_armature" solimplimit="woofer_joint_solimp" solreflimit="woofer_joint_solref" stiffness="0"/>
@@ -76,7 +76,7 @@
       <camera name="track" mode="trackcom" pos="0 -2 0.3" xyaxes="1 0 0 0 0 1"/>
       <joint armature="0" axis="1 0 0" damping="0" limited="false" name="rootx" pos="0 0 0" stiffness="0" type="free"/>
 
-			<inertial pos="0 0 0" mass="woofer_frame_mass" diaginertia="woofer_frame_inertia"/>
+			<!-- <inertial pos="0 0 0" mass="woofer_frame_mass" diaginertia="woofer_frame_inertia"/> -->
       <geom pos="0 0 0" name="torso" size="woofer_half_size" type="box"/>
 
 			<site name="imu_site" pos="0 0 0" size=".01 .01 .01" type="box"/>
@@ -86,7 +86,7 @@
 
         <joint axis="1 0 0" name="fr_x" pos="0 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
-				<inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/>
+				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
         <body name="fr_thigh_1" pos="woofer_thigh_length 0 0">
           <joint axis="0 1 0" name="fr_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
@@ -122,7 +122,7 @@
 
         <joint axis="1 0 0" name="fl_x" pos="0 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
-				<inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/>
+				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
         <body name="fl_thigh_1" pos="woofer_thigh_length 0 0">
           <joint axis="0 1 0" name="fl_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
@@ -158,7 +158,7 @@
 
         <joint axis="1 0 0" name="br_x" pos="0 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
-				<inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/>
+				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
         <body name="br_thigh_1" pos="woofer_thigh_length 0 0">
           <joint axis="0 1 0" name="br_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
@@ -194,7 +194,7 @@
 
 				<joint axis="1 0 0" name="bl_x" pos="0 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
-				<inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/>
+				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
 				<body name="bl_thigh_1" pos="woofer_thigh_length 0 0">
 					<joint axis="0 1 0" name="bl_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>

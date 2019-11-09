@@ -1,5 +1,5 @@
 @with_kw struct WooferConfig
-	MASS::Float64 = 6.135
+	MASS::Float64 = 8
 
 	# Robot joint limits
 	MAX_JOINT_TORQUE::Float64 = 12

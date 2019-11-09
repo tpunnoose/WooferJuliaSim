@@ -17,7 +17,7 @@ class WooferConfig:
 		self.FOOT_RADIUS = 0.02
 
 		# Robot inertia params
-		self.MASS = 6.135 # kg
+		self.MASS = 8 # kg
 
 		(self.L,self.W,self.T) = (0.66, 0.176, 0.092)
 		Ix = self.MASS/12 * (self.W**2 + self.T**2)
