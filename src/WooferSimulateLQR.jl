@@ -93,7 +93,7 @@ function simulate()
 
                ## Add in state estimation here ##
                x_true[1:3] .= s.d.qpos[1:3]
-               x_true[4:6] .= s.d.qpos[5:7] # is this right q -> g?
+               x_true[4:6] .= 2*s.d.qpos[5:7] # is this right q -> g?
                x_true[7:9] .= s.d.qvel[1:3]
                x_true[10:12] .= s.d.qvel[4:6] # is this in the body frame?
 
@@ -106,9 +106,6 @@ function simulate()
                # x_est[1:6] .= est_params.x[1:6]
                # x_est[7:9] .= gyro
                # last_t = t
-
-               # QP Balance Controller
-               forwardKinematics(joint_pos[1:3])
 
                lqrBalance!(lqr_forces, x_true, joint_pos, lqr_params)
                force2Torque!(lqr_torques, -lqr_forces, joint_pos)

@@ -23,6 +23,7 @@
 	INERTIA::Diagonal{Float64} = Diagonal([Ix, Iy, Iz])
 	l0::Float64 = 0.18
 	l1::Float64 = 0.32
+	INV_INERTIA::Diagonal{Float64} = inv(INERTIA)
 end
 
 WOOFER_CONFIG = WooferConfig()

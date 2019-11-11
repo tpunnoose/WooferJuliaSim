@@ -87,7 +87,7 @@ function simulate()
                x[11:13] .= s.d.qvel[4:6]
 
                x_true[1:3] .= s.d.qpos[1:3]
-               x_true[4:6] .= s.d.qpos[5:7] # is this right q -> g?
+               x_true[4:6] .= 2*s.d.qpos[5:7] # is this right q -> g?
                x_true[7:9] .= s.d.qvel[1:3]
                x_true[10:12] .= s.d.qvel[4:6] # is this in the body frame?
 

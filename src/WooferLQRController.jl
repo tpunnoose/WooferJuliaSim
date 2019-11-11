@@ -89,12 +89,3 @@ end
 function lqrBalance!(forces::Vector{T}, x::Vector{T}, joint_pos::Vector{T}, lqr_params::LQRParams) where {T<:Number}
 	forces .= lqr_params.u0 - lqr_params.L*(x - lqr_params.x0)
 end
-
-function skewSymmetricMatrix!(A::Matrix, a::Vector)
-	A[1,2] = -a[3]
-	A[1,3] = a[2]
-	A[2,1] = a[3]
-	A[2,3] = -a[1]
-	A[3,1] = -a[2]
-	A[3,2] = a[1]
-end
