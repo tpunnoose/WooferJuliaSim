@@ -88,7 +88,7 @@
 
 				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
-        <body name="fr_thigh_1" pos="woofer_thigh_length 0 0">
+        <body name="fr_thigh_1" pos="woofer_thigh_length -woofer_abduction_offset 0">
           <joint axis="0 1 0" name="fr_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->
@@ -102,7 +102,7 @@
 					<!-- <inertial pos="0 0 0" mass="woofer_leg_mass" fullinertia="woofer_leg_inertia"/> -->
         </body>
 
-				<body name="fr_thigh_2" pos="-woofer_thigh_length 0 0">
+				<body name="fr_thigh_2" pos="-woofer_thigh_length -woofer_abduction_offset 0">
           <joint axis="0 1 0" name="fr_thigh_2" pos="woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->
@@ -124,7 +124,7 @@
 
 				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
-        <body name="fl_thigh_1" pos="woofer_thigh_length 0 0">
+        <body name="fl_thigh_1" pos="woofer_thigh_length woofer_abduction_offset 0">
           <joint axis="0 1 0" name="fl_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->
@@ -138,7 +138,7 @@
 					<!-- <inertial pos="0 0 0" mass="woofer_leg_mass" fullinertia="woofer_leg_inertia"/> -->
         </body>
 
-				<body name="fl_thigh_2" pos="-woofer_thigh_length 0 0">
+				<body name="fl_thigh_2" pos="-woofer_thigh_length woofer_abduction_offset 0">
           <joint axis="0 1 0" name="fl_thigh_2" pos="woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->
@@ -160,7 +160,7 @@
 
 				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
-        <body name="br_thigh_1" pos="woofer_thigh_length 0 0">
+        <body name="br_thigh_1" pos="woofer_thigh_length -woofer_abduction_offset 0">
           <joint axis="0 1 0" name="br_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->
@@ -174,7 +174,7 @@
 					<!-- <inertial pos="0 0 0" mass="woofer_leg_mass" fullinertia="woofer_leg_inertia"/> -->
         </body>
 
-				<body name="br_thigh_2" pos="-woofer_thigh_length 0 0">
+				<body name="br_thigh_2" pos="-woofer_thigh_length -woofer_abduction_offset 0">
           <joint axis="0 1 0" name="br_thigh_2" pos="woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->
@@ -196,7 +196,7 @@
 
 				<!-- <inertial pos="0 0 0" mass="woofer_module_mass" fullinertia="woofer_module_inertia"/> -->
 
-				<body name="bl_thigh_1" pos="woofer_thigh_length 0 0">
+				<body name="bl_thigh_1" pos="woofer_thigh_length woofer_abduction_offset 0">
 					<joint axis="0 1 0" name="bl_thigh_1" pos="-woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->
@@ -210,7 +210,7 @@
 					<!-- <inertial pos="0 0 0" mass="woofer_leg_mass" fullinertia="woofer_leg_inertia"/> -->
 				</body>
 
-				<body name="bl_thigh_2" pos="-woofer_thigh_length 0 0">
+				<body name="bl_thigh_2" pos="-woofer_thigh_length woofer_abduction_offset 0">
 					<joint axis="0 1 0" name="bl_thigh_2" pos="woofer_thigh_length 0 0" limited="true" range="woofer_joint_range" type="hinge" damping="woofer_joint_damping"/>
 
 					<!-- TODO: add in approximate inertia of each leg -->

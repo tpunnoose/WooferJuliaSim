@@ -82,14 +82,14 @@ end
 """
 create Rotation matrix from quaternion projection
 """
-function rotationMatrix!(Q::Array{T,2}, x::Vector{T}) where {T<:Number}
+function rotationMatrix!(Q::Array{T,2}, x::Vector{T}) where {T<:Real}
 
 end
 
 """
 Full nonlinear dynamics for the rigid body model of Woofer
 """
-function nonlinearDynamics!(x_dot::Vector{T}, x::Vector{T}, u::Vector{T}, joint_pos::Vector{T}) where {T<:Number}
+function nonlinearDynamics!(x_dot::Vector{T}, x::Vector{T}, u::Vector{T}, joint_pos::Vector{T}) where {T<:Real}
 	x_dot .= zeros(12)
 	x_dot[1:3] .= x[7:9]
 
@@ -122,25 +122,57 @@ function nonlinearDynamics!(x_dot::Vector{T}, x::Vector{T}, u::Vector{T}, joint_
 end
 
 """
-Create linearized A matrix
+Not inplace version of nonlinearDynamics!
+
+z = [x u joint_pos]
 """
-function A!(A::Array{T,2}, x::Vector{T}, u::Vector{T}, joint_pos::Vector{T}) where {T<:Number}
-	ForwardDiff.jacobian!(A, (x_dot, x) -> nonlinearDynamics!(x_dot, x, u, joint_pos), x)
+function nonlinearDynamics(z::Vector{T}) where {T<:Real}
+	x_dot = zeros(12)
+
+	###
+
+	x_dot[1:3] .= x[7:9]
+
+	# orientation dynamics
+	x_dot[4] = x[10]*sqrt(1-0.25*(x[4]^2 + x[5]^2 + x[6]^2)) + 0.5*(x[5]*x[12] - x[6]*x[11])
+	x_dot[5] = x[11]*sqrt(1-0.25*(x[4]^2 + x[5]^2 + x[6]^2)) + 0.5*(x[4]*x[12] - x[6]*x[10])
+	x_dot[6] = x[12]*sqrt(1-0.25*(x[4]^2 + x[5]^2 + x[6]^2)) + 0.5*(x[4]*x[11] - x[5]*x[10])
+
+	# TODO: take out allocations here
+	r_i = zeros(3)
+	r_hat = zeros(3,3)
+	ω_hat = zeros(3,3)
+	Q = Matrix{Float64}(I, 3, 3)
+
+	# TODO: add rotation matrix here as function of x[4:6]
+	# rotationMatrix!(Q, x[4:6])
+
+	x_dot[7:9] .= -[0, 0, 9.81]
+	x_dot[10:12] .= -WOOFER_CONFIG.INV_INERTIA*ω_hat*WOOFER_CONFIG.INERTIA*x[10:12]
+
+	for i=1:4
+		# forces map to accelerations
+		x_dot[7:9] .= x_dot[7:9] + 1/WOOFER_CONFIG.MASS*u[3*(i-1)+1:3*(i-1)+3]
+
+		# torques map to angular accelerations
+		forwardKinematics!(r_i, joint_pos[i:i+2], i)
+		skewSymmetricMatrix!(r_hat, r_i)
+		x_dot[10:12] .= x_dot[10:12] + WOOFER_CONFIG.INV_INERTIA*r_hat*Q*u[3*(i-1)+1:3*(i-1)+3]
+	end
+
+	###
+	return x_dot
 end
 
+"""
+Create linearized A and B matrix
+"""
+function AB(x::Vector, u::Vector, joint_pos::Vector)
+	J = ForwardDiff.jacobian(nonlinearDynamics, [x..., u..., joint_pos...])
 
-"""
-Shouldn't have to do this but function of just u
-"""
-function nonlinearDynamics_u!(x_dot::Vector{T}, u::Vector{T}, x::Vector{T}, joint_pos::Vector{T}) where {T<:Number}
-	nonlinearDynamics!(x_dot, x, u, joint_pos)
-end
-
-"""
-Create linearized B matrix
-"""
-function B!(B::Array{T,2}, x::Vector{T}, u::Vector{T}, joint_pos::Vector{T}) where {T<:Number}
-	ForwardDiff.jacobian!(B, nonlinearDynamics_u!, u, x, joint_pos)
+	A = J[1:12,1:12]
+	B = J[1:12,13:24]
+	return (A, B)
 end
 
 """

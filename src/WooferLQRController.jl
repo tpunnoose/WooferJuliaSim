@@ -88,4 +88,8 @@ end
 
 function lqrBalance!(forces::Vector{T}, x::Vector{T}, joint_pos::Vector{T}, lqr_params::LQRParams) where {T<:Number}
 	forces .= lqr_params.u0 - lqr_params.L*(x - lqr_params.x0)
+	# make sure feet can't pull on the ground
+	for i=3:3:12
+		forces[i] = clamp(forces[i], 0, Inf)
+	end
 end

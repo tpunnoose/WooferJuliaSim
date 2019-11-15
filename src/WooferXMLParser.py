@@ -32,6 +32,8 @@ def Parse():
 
 	woofer_force_geom = "0 0 -0.34"
 
+	woofer_abduction_offset = WOOFER_CONFIG.ABDUCTION_OFFSET
+
 	## Mass/Inertia Params ##
 	woofer_frame_mass = "2"
 	woofer_module_mass = "1.033"
@@ -110,6 +112,7 @@ def Parse():
 	filedata = filedata.replace("woofer_shin_length", str(woofer_shin_length))
 	filedata = filedata.replace("woofer_shin_pos", str(woofer_shin_pos))
 	filedata = filedata.replace("woofer_shin_angle", str(woofer_shin_angle))
+	filedata = filedata.replace("woofer_abduction_offset", str(woofer_abduction_offset))
 
 	# Sensor noise
 	filedata = filedata.replace("woofer_accel_noise", str(woofer_accel_noise))
