@@ -37,17 +37,118 @@
 	r_bl::Vector{Float64} = [-WOOFER_CONFIG.LEG_FB, 	 WOOFER_CONFIG.LEG_LR, 0]
 end
 
+function skewSymmetricMatrix(q::Vector{Float64})
+	return [0.0 -q[3] q[2]; q[3] 0.0 -q[1]; -q[2] q[1] 0.0]
+end
+
+function L_q(q::Vector{Float64})
+	return [q[1] -q[2:4]';q[2:4] q[1]*I+skewSymmetricMatrix(q[2:4])]
+end
+
+function R_q(q::Vector{Float64})
+	return [q[1] -q[2:4]';q[2:4] q[1]*I-skewSymmetricMatrix(q[2:4])]
+end
+
 function initStateEstimator(dt::T, x::Vector{T}, P::Diagonal{T}, Q::Diagonal{T}, R::Diagonal{T}) where {T<:Number} # default Q, R?
 	return StateEstimatorParams(dt=dt, x=x, P=P, Q=Q, R=R)
 end
 
-function stateEstimatorUpdate(dt::AbstractFloat, a_b::Vector, om_b::Vector, joint_pos::Vector, joint_vel::Vector, contacts::Vector, est_params::StateEstimatorParams)
+function stateEstimatorUpdate(dt::AbstractFloat, r_hat::Vector, q_hat::Vector, joint_pos::Vector, joint_vel::Vector, est_params::StateEstimatorParams, torques::Vector)
+	x_r = est_params.x[1:3]
+	x_ϕ = est_params.x[4:6]
+	x_v = est_params.x[7:9]
+	x_w = est_params.x[10:12]
+
+	m = WOOFER_CONFIG.MASS
+	τ_F_const = 0.005
+
+	# placeholder
+	J = Matrix{Float64}(I,3,3)
+
+	V = zeros(3,4)
+	V[:,2:4] = Matrix{Float64}(I,3,3)
+
+	A_t = zeros(12,12)
+	A_t[1:3,7:9] = Matrix{Float64}(I, 3, 3)
+	A_t[4:6,4:6] = 0.5*V*R_q([0;x_w])*[x_ϕ'/sqrt(abs(1-x_ϕ'*x_ϕ));I]
+	A_t[4:6,10:12] = 0.5*(L_q([1;x_ϕ])*V')[2:4,:]
+	A_t[10:12,10:12] = inv(J)*(skewSymmetricMatrix(x_w)*J)
+
+	B_t = zeros(12,6)
+	B_t[7:9,1:3] = Matrix{Float64}(I,3,3)/m
+	B_t[10:12,4:6] = inv(J)
+
+	C_t = [I zeros(3,9); zeros(3,3) (V*L_q([1;q_hat])')[:,2:4] zeros(3,6)]
+
+	y_hat = C_t * est_params.x[1:12]
+	y_true = [r_hat; q_hat]
+
+	F = zeros(3)
+	τ = zeros(3)
+	leg_vec = zeros(3)
+
+	for i in 1:4
+		# forwardKinematics!(est_params.r_rel, joint_pos[3*(i-1)+1:3*(i-1)+3], i)
+		# if i==1
+		# 	leg_vec = est_params.r_rel - [WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
+		# elseif i==2
+		# 	leg_vec = est_params.r_rel - [WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR, 0]
+		# elseif i==3
+		# 	leg_vec = est_params.r_rel - [-WOOFER_CONFIG.LEG_FB, -WOOFER_CONFIG.LEG_LR, 0]
+		# else
+		# 	leg_vec = est_params.r_rel - [-WOOFER_CONFIG.LEG_FB, WOOFER_CONFIG.LEG_LR, 0]
+		# end
+
+		forwardKinematics!(leg_vec, joint_pos[3*(i-1)+1:3*(i-1)+3], i)
+
+		leg_torque = torques[3*(i-1)+1:3*(i-1)+3]
+		leg_hat = skewSymmetricMatrix(leg_vec)
+		F_leg = zeros(3)
+		F_leg[1:2] = τ_F_const*(pinv(leg_hat) * leg_torque)[1:2]
+		if i==1 || i==2
+			F_leg[3] = -τ_F_const*leg_torque[3]
+		else
+			F_leg[3] = τ_F_const*leg_torque[3]
+		end
+		τ_leg = τ_F_const*cross(est_params.r_rel, F_leg)
+
+		F = F + F_leg
+
+		if i==2 || i==4
+			τ = [τ[1] + τ_leg[1], τ[2] - τ_leg[2], τ[3] + τ_leg[3]]
+		else
+			τ = τ + τ_leg
+		end
+
+	end
+
+	u = [F; τ]
+	# est_params.x_ = A_t*est_params.x[1:12]
+	# forward prop dynamics
+	est_params.x_[1:3] = est_params.x_[1:3] + dt * est_params.x_[7:9]
+	est_params.x_[4:6] = (0.5 * L_q([1;x_ϕ]) * V' * x_w)[2:4]
+	est_params.x_[7:9] = F/m
+	est_params.x_[10:12] = inv(J) * (τ - cross(x_w, J*x_w))
+
+
+	est_params.P_ = A_t*est_params.P*A_t' + est_params.Q
+	K_s = est_params.P_ * C_t' * inv(C_t * est_params.P_ * C_t' + est_params.R)
+	est_params.x_plus = est_params.x_ + K_s*(y_true - y_hat)
+	est_params.P_plus = est_params.P_ - K_s*C_t*est_params.P_
+
+	est_params.x = est_params.x_plus
+	est_params.P = est_params.P_plus
+
+end
+
+function stateEstimatorUpdate2(dt::AbstractFloat, a_b::Vector, om_b::Vector, joint_pos::Vector, joint_vel::Vector, contacts::Vector, est_params::StateEstimatorParams)
 	"""
 	EKF State Estimator
 	x = [z_b, phi, theta, v_b, b_a, b_om]
 
 	TODO: need to make everything in place (skewSymmetricMatrix -> skewSymmetricMatrix!)
 	"""
+	@show est_params.x
 	# scalar part of quaternion
 	est_params.qs = sqrt(1 - 0.25*(est_params.x[2]^2 + est_params.x[3]^2))
 
@@ -125,6 +226,7 @@ function stateEstimatorUpdate(dt::AbstractFloat, a_b::Vector, om_b::Vector, join
 	est_params.A[10:12, 10:12] .= Matrix{Float64}(I, 3, 3)
 
 	# prediction step
+
 	est_params.x_ = est_params.x + est_params.xdot*dt
 	est_params.P_ = est_params.A * est_params.P * est_params.A' + est_params.Q
 

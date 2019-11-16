@@ -21,19 +21,20 @@ function simulate()
    joint_pos = zeros(12)
    joint_vel = zeros(12)
    contacts = zeros(4)
-   r_body = zeros(12)
 
    ψ = 0.0
-   # x_des = [0.0, 0.0, 0.32, 0.05, 0.05, ψ, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0]
-   x_des = [0.0, 0.0, 0.32, 0.00, 0.00, ψ, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0]
+   ϕ = 0.0
+   x_des = [0.0, 0.0, 0.30, 0.00, ϕ, ψ, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0]
 
    lower_dt = 0.001
-   # x0 = [0.34, zeros(11)...]
-   # P = Diagonal([0.01, 0.1*ones(2)..., 0.1*ones(3)..., 0.1*ones(6)...])
-   # Q = Diagonal([0.001, 0.001*ones(2)..., 0.001*ones(3)..., 1e-10*ones(6)...])
-   # R = Diagonal([0.001, 0.01*ones(3)...])
-   # est_params = StateEstimatorParams(dt=lower_dt, x=x0, P=P, Q=Q, R=R)
-   # last_t = 0.0
+   x0 = [0.00, 0.0, 0.30, zeros(9)...]
+   P = Diagonal([0.01, 0.1*ones(2)..., 0.1*ones(3)..., 0.1*ones(6)...])
+   Q = 0.001*Matrix{Float64}(I, 12, 12)
+   R = 0.001*Matrix{Float64}(I, 6, 6)
+   #Q = Diagonal([0.001, 0.001*ones(2)..., 0.001*ones(3)..., 1e-10*ones(6)...])
+   #R = Diagonal([0.001, 0.01*ones(3)...])
+   est_params = StateEstimatorParams(dt=lower_dt, x=x0, P=P, Q=Q, R=R)
+   last_t = 0.0
 
    lqr_params = initLQRParams(lower_dt, x_des, ψ)
    lqr_forces = zeros(12)
@@ -102,16 +103,18 @@ function simulate()
                joint_pos   .= s.d.sensordata[7:18]
                joint_vel   .= s.d.sensordata[19:30]
 
-               # stateEstimatorUpdate(t-last_t, accel, gyro, joint_pos, joint_vel, contacts, est_params)
-               # x_est[1:6] .= est_params.x[1:6]
-               # x_est[7:9] .= gyro
-               # last_t = t
+               stateEstimatorUpdate(t-last_t, x[1:3], x[5:7], joint_pos, joint_vel, est_params, lqr_torques)
+               #stateEstimatorUpdate(t-last_t, accel, gyro, joint_pos, joint_vel, contacts, est_params)
+               # @show x_est[3]
+               @show x_true[3]
+               x_est = est_params.x
+               last_t = t
 
-               # QP Balance Controller
-               forwardKinematics(joint_pos[1:3])
-
+               # LQR Balance Controller
                lqrBalance!(lqr_forces, x_true, joint_pos, lqr_params)
                force2Torque!(lqr_torques, -lqr_forces, joint_pos)
+               clamp!(lqr_torques, -12, 12)
+
                s.d.ctrl .= lqr_torques
             end
 
@@ -126,34 +129,4 @@ function simulate()
       GLFW.PollEvents()
    end
    GLFW.DestroyWindow(s.window)
-
-   # print("RMS roll error: ")
-   # println(sqrt(mean((plot_est_state[2,:] - plot_true_state[2,:]).^2)))
-   #
-   # print("RMS pitch error: ")
-   # println(sqrt(mean((plot_est_state[3,:] - plot_true_state[3,:]).^2)))
-   #
-   # print("RMS vx error: ")
-   # println(sqrt(mean((plot_est_state[4,:] - plot_true_state[4,:]).^2)))
-   #
-   # print("RMS vy error: ")
-   # println(sqrt(mean((plot_est_state[5,:] - plot_true_state[5,:]).^2)))
-   #
-   # print("RMS vz error: ")
-   # println(sqrt(mean((plot_est_state[6,:] - plot_true_state[6,:]).^2)))
-
-   # plot(plot_est_state[2,:])
-   # plot!(plot_true_state[2,:])
-   #
-   # plot(plot_est_state[3,:])
-   # plot!(plot_true_state[3,:])
-
-   # plot(plot_est_state[4,:])
-   # plot!(plot_true_state[4,:])
-
-   # plot(plot_est_state[5,:])
-   # plot!(plot_true_state[5,:])
-   #
-   # plot(plot_est_state[6,:])
-   # plot!(plot_true_state[6,:])
 end
