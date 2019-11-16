@@ -28,8 +28,8 @@ include("WooferStateEstimator.jl")
 # LQR Files
 include("WooferLQRController.jl")
 
-# QP Files
-include("WooferQPController.jl")
+# # QP Files
+# include("WooferQPController.jl")
 
 
 ##################################################### globals

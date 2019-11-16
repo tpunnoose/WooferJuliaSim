@@ -1,5 +1,3 @@
-using ControlSystems
-
 @with_kw struct LQRParams
 	L::Array{Float64, 2}
 	V::Array{Float64, 2}
@@ -101,4 +99,44 @@ function skewSymmetricMatrix!(A::Matrix, a::Vector)
 	A[2,3] = -a[1]
 	A[3,1] = -a[2]
 	A[3,2] = a[1]
+end
+
+"""
+Discrete Algebraic Ricatti Equation
+- taken from ControlSystems.jl
+"""
+function dare(A, B, Q, R)
+    G = try
+        B*inv(R)*B'
+    catch
+        error("R must be non-singular.")
+    end
+
+    Ait = try
+        inv(A)'
+    catch
+        error("A must be non-singular.")
+    end
+
+    Z = [A + G*Ait*Q   -G*Ait;
+         -Ait*Q        Ait]
+
+    S = schur(Z)
+    S = ordschur(S, abs.(S.values).<=1)
+    U = S.Z
+
+    (m, n) = size(U)
+    U11 = U[1:div(m, 2), 1:div(n,2)]
+    U21 = U[div(m,2)+1:m, 1:div(n,2)]
+    return U21/U11
+end
+
+"""
+Returns the Discrete LQR gain matrix
+- taken from ControlSystems.jl
+"""
+function dlqr(A, B, Q, R)
+    S = dare(A, B, Q, R)
+    K = (B'*S*B + R)\(B'S*A)
+    return K
 end
