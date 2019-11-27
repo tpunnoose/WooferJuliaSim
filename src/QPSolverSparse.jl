@@ -6,11 +6,14 @@ formulation.
 using OSQP
 using ControlSystems
 using BlockArrays
+using LinearAlgebra
 
 using Convex
-using ECOS
+# using ECOS
 # using SCS
 # using Parametron # TODO: use this
+
+include("WooferConfig.jl")
 
 @with_kw struct MPCControllerParams
 	# inverse of inertia tensor in body frame

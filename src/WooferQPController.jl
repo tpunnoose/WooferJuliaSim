@@ -1,5 +1,9 @@
 using ControlSystems
 using OSQP
+using Rotations
+using SparseArrays
+
+include("WooferDynamics.jl")
 
 @with_kw struct QPParams
 	V::Array{Float64, 2}

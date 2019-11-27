@@ -1,3 +1,11 @@
+using Parameters
+
+include("QPSolverSparse.jl")
+include("SwingLegController.jl")
+include("Gait.jl")
+include("WooferDynamics.jl")
+include("FootstepPlanner.jl")
+
 @with_kw mutable struct ControllerParams
 	# initialize everything once
    mpc_torques = zeros(12)
@@ -16,7 +24,7 @@
    active_feet = zeros(Int64, 4)
    active_feet_12 = zeros(Int64, 12)
 
-   N
+   N::Int64
 
    mpc_update = 0.001
 

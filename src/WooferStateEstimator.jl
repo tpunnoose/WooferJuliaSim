@@ -1,3 +1,7 @@
+using Parameters
+
+include("WooferDynamics.jl")
+
 @with_kw mutable struct StateEstimatorParams
 	# current estimate
 	x::Vector{Float64}

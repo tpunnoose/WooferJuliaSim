@@ -1,4 +1,9 @@
 using ControlSystems
+using Rotations
+using LinearAlgebra
+using Parameters
+
+include("WooferDynamics.jl")
 
 @with_kw struct LQRParams
 	L::Array{Float64, 2}

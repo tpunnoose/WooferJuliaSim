@@ -4,31 +4,9 @@ module WooferSim
 
 import GLFW
 using MuJoCo
-using StaticArrays
-using PyCall
-using Rotations
 using Parameters
-using LinearAlgebra
-using SparseArrays
-# using Plots
-using Statistics
 
-include("WooferDynamics.jl")
 include("WooferConfig.jl")
-
-# MPC Controller Files
-include("QPSolverSparse.jl") # include this for sparse MPC formulation
-include("Gait.jl")
-include("FootstepPlanner.jl")
-include("SwingLegController.jl")
-include("WooferMPCController.jl")
-
-# LQR Files
-include("WooferLQRController.jl")
-
-# QP Files
-include("WooferQPController.jl")
-
 
 ##################################################### globals
 const fontscale = mj.FONTSCALE_200 # can be 100, 150, 200
@@ -538,7 +516,7 @@ function mouse_button(s::mjSim, window::GLFW.Window,
       if selmode == 2 || selmode == 3
          # copy selpnt if geom clicked
          if selbody >= 0
-            s.cam[].lookat = SVector{3,Float64}(selpnt...)
+            s.cam[].lookat = selpnt
          end
 
          # switch to tracking camera
@@ -552,7 +530,7 @@ function mouse_button(s::mjSim, window::GLFW.Window,
             # compute localpos
             tmp = selpnt - s.d.xpos[:,selbody+1]
             res = reshape(s.d.xmat[:,selbody+1], 3, 3)' * tmp
-            s.pert[].localpos = SVector{3}(res)
+            s.pert[].localpos = res
 
             # record selection
             s.pert[].select = selbody

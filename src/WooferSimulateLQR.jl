@@ -1,3 +1,7 @@
+using MuJoCo
+using PyCall
+include("WooferLQRController.jl")
+
 function simulate()
    # look at local directory
    pushfirst!(PyVector(pyimport("sys")."path"), @__DIR__)
@@ -28,12 +32,6 @@ function simulate()
    x_des = [0.0, 0.0, 0.32, 0.00, 0.00, ψ, 0.0, 0.0, 0.00, 0.0, 0.0, 0.0]
 
    lower_dt = 0.001
-   # x0 = [0.34, zeros(11)...]
-   # P = Diagonal([0.01, 0.1*ones(2)..., 0.1*ones(3)..., 0.1*ones(6)...])
-   # Q = Diagonal([0.001, 0.001*ones(2)..., 0.001*ones(3)..., 1e-10*ones(6)...])
-   # R = Diagonal([0.001, 0.01*ones(3)...])
-   # est_params = StateEstimatorParams(dt=lower_dt, x=x0, P=P, Q=Q, R=R)
-   # last_t = 0.0
 
    lqr_params = initLQRParams(lower_dt, x_des, ψ)
    lqr_forces = zeros(12)
@@ -84,12 +82,6 @@ function simulate()
                x[4:7] .= s.d.qpos[4:7]
                x[8:10] .= s.d.qvel[1:3]
                x[11:13] .= s.d.qvel[4:6]
-
-               q = Quat(x[4], x[5], x[6], x[7])
-               R = SMatrix{3,3}(q)
-
-               x_b = R'*x[1:3]
-               v_b = R'*x[8:10]
 
                ## Add in state estimation here ##
                x_true[1:3] .= s.d.qpos[1:3]

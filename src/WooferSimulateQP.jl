@@ -1,3 +1,7 @@
+using PyCall
+using MuJoCo
+include("WooferQPController.jl")
+
 function simulate()
    # look at local directory
    pushfirst!(PyVector(pyimport("sys")."path"), @__DIR__)
@@ -83,12 +87,6 @@ function simulate()
                x[4:7] .= s.d.qpos[4:7]
                x[8:10] .= s.d.qvel[1:3]
                x[11:13] .= s.d.qvel[4:6]
-
-               q = Quat(x[4], x[5], x[6], x[7])
-               R = SMatrix{3,3}(q)
-
-               x_b = R'*x[1:3]
-               v_b = R'*x[8:10]
 
                ## Add in state estimation here ##
                x_true[1:3] .= s.d.qpos[1:3]

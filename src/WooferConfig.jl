@@ -1,3 +1,5 @@
+using LinearAlgebra
+
 @with_kw struct WooferConfig
 	MASS::Float64 = 8
 

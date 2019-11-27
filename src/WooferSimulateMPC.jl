@@ -1,3 +1,7 @@
+using MuJoCo
+using PyCall
+include("WooferMPCController.jl")
+
 function simulate()
    # look at local directory
    pushfirst!(PyVector(pyimport("sys")."path"), @__DIR__)
@@ -65,11 +69,6 @@ function simulate()
          for i=1:steps
             # clear old perturbations, apply new
             d.xfrc_applied .= 0.0
-
-            # add in noise like perturbations
-            # d.xfrc_applied[7:9] .= [5, 5, -10]
-            # d.xfrc_applied[7:9] .= 10*randn(Float64, 3)
-            # d.xfrc_applied[10:12] .= 5*randn(Float64, 3)
 
             if s.pert[].select > 0
                mjv_applyPerturbPose(m, d, s.pert, 0) # move mocap bodies only
