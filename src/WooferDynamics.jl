@@ -102,7 +102,9 @@ function nonlinearDynamics!(x_dot::Vector{T}, x::Vector{T}, u::Vector{T}, joint_
 	r_i = zeros(3)
 	r_hat = zeros(3,3)
 	ω_hat = zeros(3,3)
-	Q = Matrix{Float64}(I, 3, 3)
+    Q = Matrix{Float64}(I, 3, 3)
+    
+    skewSymmetricMatrix!(ω_hat, x[10:12])
 
 	# TODO: add rotation matrix here as function of x[4:6]
 	# rotationMatrix!(Q, x[4:6])
