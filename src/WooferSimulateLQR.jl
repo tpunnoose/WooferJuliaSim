@@ -36,9 +36,19 @@ function simulate()
    est_params = StateEstimatorParams(dt=lower_dt, x=x0, P=P, Q=Q, R=R)
    last_t = 0.0
 
+
+   # Plotting Data
+   plot_N = 10000
+   torque_plot = zeros(12, plot_N)
+   force_plot = zeros(12, plot_N)
+   t_plot = zeros(plot_N)
+   plot_count = 1
+
    lqr_params = initLQRParams(lower_dt, x_des, ψ)
    lqr_forces = zeros(12)
    lqr_torques = zeros(12)
+
+   state_history = zeros(12, plot_)
 
    # Loop until the user closes the window
    WooferSim.alignscale(s)
@@ -106,7 +116,7 @@ function simulate()
                stateEstimatorUpdate(t-last_t, x[1:3], x[5:7], joint_pos, joint_vel, est_params, lqr_torques)
                #stateEstimatorUpdate(t-last_t, accel, gyro, joint_pos, joint_vel, contacts, est_params)
                # @show x_est[3]
-               @show x_true[3]
+               # @show x_true[3]
                x_est = est_params.x
                last_t = t
 
@@ -114,6 +124,15 @@ function simulate()
                lqrBalance!(lqr_forces, x_true, joint_pos, lqr_params)
                force2Torque!(lqr_torques, -lqr_forces, joint_pos)
                clamp!(lqr_torques, -12, 12)
+
+
+               if plot_count < plot_N
+                  torque_plot[:, plot_count] .= lqr_torques
+                  force_plot[:, plot_count] .= lqr_forces
+                  println(lqr_forces[3])
+                  t_plot[plot_count] = t
+                  plot_count += 1
+               end
 
                s.d.ctrl .= lqr_torques
             end
@@ -129,4 +148,40 @@ function simulate()
       GLFW.PollEvents()
    end
    GLFW.DestroyWindow(s.window)
+
+   mu = 1.5
+
+   plot(torque_plot[1:3,:]')
+   png("plots/torque_fr.png")
+
+
+   print(size(hcat(force_plot[1:3,:]', mu*force_plot[3,:], -mu*force_plot[3,:])))
+
+   plot(hcat(force_plot[1:3,:]', mu*force_plot[3,:], -mu*force_plot[3,:]), labels=["fx", "fy", "fz", "mu*fz", "-mu*fz"], reuse=false)
+   png("plots/force_fr.png")
+
+   # plot(torque_plot[4:6,:]')
+   # png("plots/torque_fl.png")
+   #
+   plot(hcat(force_plot[4:6,:]', mu*force_plot[6,:], -mu*force_plot[6,:]), labels=["fx", "fy", "fz", "mu*fz", "-mu*fz"], reuse=false)
+   png("plots/force_fl.png")
+   #
+   # plot(torque_plot[7:9,:]')
+   # png("plots/torque_br.png")
+   #
+   plot(hcat(force_plot[7:9,:]', mu*force_plot[9,:], -mu*force_plot[9,:]), labels=["fx", "fy", "fz", "mu*fz", "-mu*fz"], reuse=false)
+   png("plots/force_br.png")
+   #
+   # plot(torque_plot[10:12,:]')
+   # png("plots/torque_bl.png")
+   #
+   plot(hcat(force_plot[10:12,:]', mu*force_plot[12,:], -mu*force_plot[12,:]), labels=["fx", "fy", "fz", "mu*fz", "-mu*fz"], reuse=false)
+   png("plots/force_bl.png")
+end
+
+"""
+Test sensitivity to latency by delaying state/sensor information
+"""
+function delay()
+
 end

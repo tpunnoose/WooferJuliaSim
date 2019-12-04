@@ -10,7 +10,7 @@ using Rotations
 using Parameters
 using LinearAlgebra
 using SparseArrays
-# using Plots
+using Plots
 using Statistics
 
 include("WooferDynamics.jl")
